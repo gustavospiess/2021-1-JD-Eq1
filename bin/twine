@@ -1,0 +1,8 @@
+#!/home/ghspiess/program_projects/bcc_2021_1_games/bin/python
+# -*- coding: utf-8 -*-
+import re
+import sys
+from twine.__main__ import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
