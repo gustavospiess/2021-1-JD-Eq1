@@ -1,0 +1,87 @@
+@startuml dataModels
+package dataModule {
+
+    class Object {
+        +name: str
+        +description: str
+        +look(): Action
+        +open(): Action
+        +use(): Action
+    }
+
+    class Ambient {
+        +objects: List[Object]
+    }
+
+    class Item {
+        +take(): Action
+        +put(): Action
+    }
+
+    class Passage {
+        +from: Ambient
+        +to: Ambient
+        +go(): Action
+    }
+
+    class Game {
+        +ambients: List[Ambient]
+        +passages: List[Passage]
+    }
+
+    class Action {
+        description: str
+    }
+
+    Ambient *-- Object
+    Object <|-- Item
+    Passage *-- Ambient
+    Object <|-- Passage
+    Game *-- Ambient
+    Game *-- Passage
+
+    note as ObjectNote
+        `Object` é a representação abstrata de tudo o que o usuário pode
+        interagir com. Ele possúi um nome, para a descrição quando o usuário
+        entra em contato com ele pela primeira vez. E uma descrição longa, para
+        quando o usuário manda olhar diretamente para o objeto.
+    end note
+
+    note as ItemNote
+        `Item` é a representação de objetos que podem ser movidos pelo jogo,
+        itens são objetos que o jogador pode pegar e colocar em diferentes
+        ambientes.
+    end note
+
+    note as AmbientNote
+        `Ambient` é a representação dos locais onde o usuário pode estar.
+    end note
+
+    note as PassageNote
+        `Passage` é a representação de objetos que deixam o usuário ir de um
+        ambiente para o outro. Não necessariamente possibilitando o retorno.
+    end note
+
+    note as ActionNote
+        `Action` é uma interface para complementação de ações. O retorno de um
+        método de `use` pode ser uma action exigindo uma alvo para o uso.
+        
+        A ação pode também retornar uma mensagem de falha, dizendo que a ação
+        não é possível (por exemplo uma porta estar trancada)
+    end note
+
+    ObjectNote .up. Object
+    ItemNote .. Item
+    AmbientNote .right. Ambient
+    PassageNote .left. Passage
+
+    ActionNote .. Action
+
+}
+
+package gameInterface {
+    class GameInterface {
+        +play(Game game): None
+    }
+}
+@enduml
