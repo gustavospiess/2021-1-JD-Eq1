@@ -13,5 +13,10 @@ publish-test:
 test:
 	python -m pytest
 
+retest:
+	while true; do \
+		find src/ | entr -d -c python -m pytest; \
+	done; \
+
 depend:
 	python -m pip install -r requirements_dev.txt
