@@ -1,4 +1,7 @@
 import tracery
+import random
+import collections
+import functools
 
 _MONSTER_NAME = {
         'main' : ['#part#'*i for i in range(2,5)],
@@ -48,9 +51,41 @@ def intro_letter():
         yield g.flatten('#main#')
 
 
+class ContextualModifiers(collections.abc.Mapping):
+
+    def __init__(self, grammar):
+        self.grammar = grammar
+        self.__norepeat = {}
+        self.__mapping = {
+            'norepeat': functools.partial(self.norepeat)
+        }
+
+
+    def norepeat(self, text=None, group=None):
+        if group in self.grammar.symbols and isinstance(self.grammar.symbols[group].raw_rules, list):
+            if group not in self.__norepeat or not self.__norepeat[group]:
+                self.__norepeat[group] = {i for i in self.grammar.symbols[group].raw_rules}
+            new_text = random.choice(tuple(self.__norepeat[group]))
+            self.__norepeat[group] = self.__norepeat[group] - {new_text}
+            return new_text
+        else:
+            return text
+
+    def reset_norepeat(self):
+        self.__norepeat = {}
+
+
+    def __getitem__(self, key):
+        return self.__mapping[key]
+
+    def __iter__(self):
+        return iter(self.__mapping)
+
+    def __len__(self):
+        return len(self.__mapping)
+
 class SuperContext():
     def __init__(self):
-        print(self)
         pass
 
 
