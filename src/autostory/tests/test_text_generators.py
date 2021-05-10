@@ -109,4 +109,3 @@ def test_place_generation():
         place = context._map.make_place()
         print(place.describe())
         assert place.describe()
-    assert 0
