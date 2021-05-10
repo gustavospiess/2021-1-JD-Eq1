@@ -1,22 +1,31 @@
+# Makefile
+
+SHELL := /bin/bash
 .PHONY: build test publish depend publish-test
 
 build:
 	rm dist/*
-	python setup.py sdist bdist_wheel
+	source bin/activate && python setup.py sdist bdist_wheel
 
 publish:
-	python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+	source bin/activate && python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
 
 publish-test:
-	python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+	source bin/activate && python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 test:
-	python -m pytest
+	source bin/activate && python -m pytest
 
 retest:
 	while true; do \
-		find src/ | entr -d -c python -m pytest; \
+		source bin/activate && find src/ | entr -d -c python -m pytest; \
 	done; \
 
 depend:
-	python -m pip install -r requirements_dev.txt
+	source bin/activate && python -m pip install -r requirements_dev.txt
+
+ipython:
+	source bin/activate && ipython
+
+freeze:
+	source bin/activate && python -m pip freeze > requirements_dev.txt
