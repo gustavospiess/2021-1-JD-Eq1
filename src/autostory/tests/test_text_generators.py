@@ -61,6 +61,18 @@ def test_contextual_norepeat_sparce():
         mod.reset_norepeat()
 
 
+def test_contextual_norepeat_inirect():
+    g = text_generators.tracery.Grammar({
+        'a': ['b'],
+        'b': ['lorem'],
+        'empty': ''
+        })
+    mod = text_generators.ContextualModifiers(g)
+    g.add_modifiers(mod)
+    assert g.flatten('#empty.norepeat(a)#') == 'lorem'
+
+
+
 def test_contextual_gender():
     g = text_generators.tracery.Grammar({
         'female': 'a',
@@ -76,16 +88,25 @@ def test_contextual_gender():
 def test_context_object():
     for _ in range(10):
         context = text_generators.Context()
-        assert context.place is not None
-        assert isinstance(context.place, text_generators.PlaceContext)
-        g = context.place.make_grammar()
+        assert context._map is not None
+        assert isinstance(context._map, text_generators.MapContext)
+        g = context._map.make_grammar()
         assert g.flatten('#adjetivo#')
         assert g.flatten('#nome#')
         assert g.flatten('#tipo#')
 
 
-def test_place_generation_1():
+def test_map_generation_1():
     for _ in range(10):
         context = text_generators.Context()
-        d = context.place.describe()
+        d = context._map.describe()
         assert d
+
+
+def test_place_generation():
+    context = text_generators.Context()
+    for _ in range(20):
+        place = context._map.make_place()
+        print(place.describe())
+        assert place.describe()
+    assert 0

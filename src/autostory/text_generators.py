@@ -89,14 +89,21 @@ class ContextualModifiers(collections.abc.Mapping):
         }
 
 
-    def gender(self, gender, text): 
-        return self.grammar.flatten(f'#{text}_{gender}#')
+    def gender(self, gender, text, flat=True): 
+        if flat:
+            return self.grammar.flatten(f'#{text}_{gender}#')
+        return f'{text}_{gender}'
 
 
     def norepeat(self, text=None, group=None):
-        if group in self.grammar.symbols and isinstance(self.grammar.symbols[group].raw_rules, list):
+        symbols = self.grammar.symbols
+        if group in symbols and isinstance(symbols[group].raw_rules, list):
+            sym = symbols[group]
+            raw = sym.raw_rules
+            if len(raw) == 1 and raw[0] in symbols and raw[0] != group: 
+                return self.norepeat(text, raw[0])
             if group not in self.__norepeat or not self.__norepeat[group]:
-                self.__norepeat[group] = {i for i in self.grammar.symbols[group].raw_rules}
+                self.__norepeat[group] = {i for i in raw}
             new_text = None
             while (new_text is None and self.__norepeat[group]):
                 new_text = choice(tuple(self.__norepeat[group]))
@@ -163,25 +170,19 @@ class Adjective():
                 )
 
     @classmethod
-    def make_agender(cls, rad):
-        rad_s = f'{rad}s'
+    def make_agender(cls, rad, rad_s=None, same=False):
+        if same:
+            rad_s = rad
+        elif rad_s is None:
+            rad_s = f'{rad}s'
         return Adjective(rad, rad_s, rad, rad_s)
 
 
-place_type_list = [
-        f_substantive('mansão'),
-        m_substantive('castelo'),
-        m_substantive('casarão'),
-        f_substantive('catacumba'),
-        ]
-
 @dataclass(frozen=True)
-class PlaceFlavor():
+class Flavor():
     _adjectives: tuple
 
-    def raw(self):
-        adj = 'adjetivo'
-
+    def raw(self, adj = 'adjetivo'):
         return {
                 f'{adj}_o': [a.m for a in self._adjectives],
                 f'{adj}_os': [a.ms for a in self._adjectives],
@@ -200,48 +201,136 @@ class PlaceFlavor():
             return new
 
 
-place_flavor_list = [
-        PlaceFlavor((
+map_flavor_list = [
+        Flavor((
             Adjective.make('decrépit'),
             Adjective.make('decaíd'),
             Adjective.make('abandonad'),
             Adjective.make('descuidad'),
             Adjective.make('maltratad'),
             Adjective.make('castigad'))),
-        PlaceFlavor((
+        Flavor((
             Adjective.make('sombri'),
             Adjective.make('escur'),
             Adjective.make('mal iluminad'),
             Adjective.make('obscur'),
             Adjective.make_agender('fúnebre'))),
-        PlaceFlavor((
+        Flavor((
             Adjective.make('gótic'),
             Adjective.make('melancólic'),
             Adjective.make_agender('triste'),
             Adjective.make_agender('sufocante'))),
-        PlaceFlavor((
+        Flavor((
             Adjective.make('isolad'),
             Adjective.make('solitári'),
-            Adjective.make_agender('só'),
-            Adjective.make_agender('distante'))),
-        PlaceFlavor((
+            Adjective.make_agender('só'))),
+        Flavor((
             Adjective.make('mal falad'),
             Adjective.make('maldit'),
             Adjective.make('amaldiçoad'),
             Adjective.make('assombrad'),
             Adjective.make('malign'),
-            ))
+            )),
+        ]
+
+secondary_flavor_list = [
+        Flavor((
+            Adjective.make('empoeirad'),
+            Adjective.make('suj'),
+            Adjective.make('imund'),
+            )),
+        Flavor((
+            Adjective.make('fri'),
+            Adjective.make('gélid'),
+            Adjective.make('gelad'),
+            )),
+        Flavor((
+            Adjective.make('húmid'),
+            Adjective.make('mofad'),
+            )),
+        Flavor((
+            Adjective.make('pequen'),
+            Adjective.make('claustrofóbic'),
+            Adjective.make('apertad'),
+            )),
+        ]
+
+terciary_flavor_list = [
+        Flavor((
+            Adjective.make_agender('com pó se acumulando nas superfícies', same=True),
+            Adjective.make_agender('com teias de aranha', same=True),
+            )),
+        Flavor((
+            Adjective.make_agender('com goteiras', same=True),
+            Adjective.make_agender('com poças d\'água', same=True),
+            )),
+        Flavor((
+            Adjective.make_agender('com mofo', same=True),
+            Adjective.make_agender('com cheiro de mofo', same=True),
+            )),
+        Flavor((
+            Adjective.make_agender('com poças de sangue seco', same=True),
+            Adjective.make_agender('com cheiro de sangue', same=True),
+            )),
+        Flavor((
+            Adjective.make_agender('com um vento macabro', same=True),
+            Adjective.make_agender('com uma brisa desagradável', same=True),
+            )),
+        Flavor((
+            Adjective.make_agender('com cheiro de podre', same=True),
+            Adjective.make_agender('com um cheiro desagradável', same=True),
+            )),
         ]
 
 
-def composed_flavor():
-    return PlaceFlavor.join(*sample(place_flavor_list, 3))
+def composed_map_flavor():
+    return Flavor.join(*sample(map_flavor_list, 3))
 
 
 @dataclass(frozen=True)
-class Place():
-    base_type: 'Substantive' = field(default_factory=partial(choice, place_type_list), init=False)
-    flavor: 'PlaceFlavor' = field(default_factory=composed_flavor, init=False)
+class BaseMapType():
+    desc: tuple
+    place_types: tuple
+
+    def raw(self, prefix=''):
+        return {
+                 **choice(self.desc).raw(prefix)
+                }
+
+@dataclass(frozen=True)
+class BasePlaceType():
+    desc: 'Substantive'
+    repeat: bool = False
+    restrain: bool = False
+
+
+map_type = BaseMapType(
+        (
+            f_substantive('mansão'),
+            m_substantive('castelo'),
+            m_substantive('casarão'),
+            ),
+        (
+            f_substantive('cozinha'),
+            f_substantive('sala'),
+            f_substantive('sala de jantar'),
+            f_substantive('sala de estar'),
+            f_substantive('sala de Leitura'),
+            f_substantive('biblioteca'),
+            m_substantive('corredor'),
+            m_substantive('quarto de visitantes'),
+            m_substantive('quarto de empregados'),
+            m_substantive('quarto'),
+            m_substantive('atelie'),
+            )
+        )
+
+
+
+@dataclass(frozen=True)
+class Map():
+    base_type: 'BaseMapType' = field(default=map_type, init=False)
+    flavor: 'Flavor' = field(default_factory=composed_map_flavor, init=False)
     name: str = field(default_factory=lambda: next(_location_names), init=False)
 
 
@@ -259,6 +348,7 @@ class SuperContext():
         g.add_modifiers(ContextualModifiers(g))
         return g
 
+    @lru_cache
     def describe(self):
         grammar = self.make_grammar()
         desc = grammar.flatten(self._base_description)
@@ -266,12 +356,12 @@ class SuperContext():
 
 class Context(SuperContext):
     def __init__(self):
-        super().__init__();
+        super().__init__()
 
-        self.place = PlaceContext(Place())
+        self._map = MapContext(Map())
 
 
-_PLACE_BASE_DESCRIPTION ='''
+_MAP_BASE_DESCRIPTION ='''
 #tipo_o# #tipo# #nome# é um lugar #empty.norepeat(adjetivo_o)# com seus muros
 #empty.norepeat(adjetivo_os)# e seus portais #empty.norepeat(adjetivo_os)#.  As
 paredes #empty.norepeat(adjetivo_as)# e #empty.norepeat(adjetivo_as)#, o piso e
@@ -281,9 +371,42 @@ sua alma estivesse se tornando #empty.norepeat(adjetivo_a)# conforme você olha
 para esta silhueta #empty.norepeat(adjetivo_a)#. Este não é o local onde você
 queria estar.'''
 
+class MapContext(SuperContext):
+    def __init__(self, _map):
+        super().__init__(_MAP_BASE_DESCRIPTION)
+        self._raw_grammar['nome'] = _map.name
+        self._raw_grammar.update(_map.flavor.raw())
+        self._raw_grammar.update(_map.base_type.raw('tipo'))
+
+        self._map = _map
+        self.places = []
+
+    def make_place(self):
+        self.places.append(PlaceContext(self))
+        return self.places[-1]
+
+
+_PLACE_BASE_DESCRIPTION = ['''
+        [temp:adjetivo_#tipo_o#] [temp2:adjetivo_comp_#tipo_o#]
+        #tipo_um# #tipo# #empty.norepeat(temp)# e #empty.norepeat(temp2)#
+        ''', '''
+        [temp:adjetivo_#tipo_o#]
+        #tipo_um# #tipo# #empty.norepeat(temp)#
+        ''','''
+        [temp2:adjetivo_comp_#tipo_o#]
+        #tipo_um# #tipo# #empty.norepeat(temp)# #empty.norepeat(temp2)# ''']
+
 class PlaceContext(SuperContext):
-    def __init__(self, place):
-        super().__init__(_PLACE_BASE_DESCRIPTION);
-        self._raw_grammar['nome'] = place.name
-        self._raw_grammar.update(place.flavor.raw())
-        self._raw_grammar.update(place.base_type.raw('tipo'))
+    def __init__(self, _map_context):
+
+        super().__init__('#desc#')
+        self._raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
+        nome = choice(_map_context._map.base_type.place_types)
+        self._raw_grammar.update(nome.raw('tipo'))
+
+        flavor = choice(secondary_flavor_list)
+        self._raw_grammar.update(flavor.raw())
+
+        flavor = choice(terciary_flavor_list)
+        self._raw_grammar.update(flavor.raw('adjetivo_comp'))
+
