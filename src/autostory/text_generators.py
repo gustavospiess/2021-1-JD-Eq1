@@ -1,4 +1,4 @@
-import tracery
+from tracery import Grammar
 from collections.abc import Mapping
 from random import choice, sample
 from functools import partial, lru_cache
@@ -16,7 +16,7 @@ _MONSTER_NAME = {
 
 
 def monster_names():
-    g = tracery.Grammar(_MONSTER_NAME)
+    g = Grammar(_MONSTER_NAME)
     while True:
         yield g.flatten('#main#')
 
@@ -50,7 +50,7 @@ _INTRO_LETTER = {
 
 
 def intro_letter():
-    g = tracery.Grammar(_INTRO_LETTER)
+    g = Grammar(_INTRO_LETTER)
     while True:
         yield g.flatten('#main#')
 
@@ -71,7 +71,7 @@ _LOCATION_NAMES = {
 
 
 def location_names():
-    g = tracery.Grammar(_LOCATION_NAMES)
+    g = Grammar(_LOCATION_NAMES)
     while True:
         yield g.flatten('#main#')
 _LOCATION_NAMES_GENERATOR = location_names()
@@ -344,7 +344,7 @@ class SuperContext():
         return self._raw_grammar
 
     def make_grammar(self):
-        g = tracery.Grammar(self.raw_grammar)
+        g = Grammar(self.raw_grammar)
         g.add_modifiers(ContextualModifiers(g))
         return g
 

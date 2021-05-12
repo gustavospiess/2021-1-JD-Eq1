@@ -20,7 +20,7 @@ def test_location_names():
 
 
 def test_contextual_norepeat():
-    g = text_generators.tracery.Grammar({
+    g = text_generators.Grammar({
         'a': [str(i) for i in range(50)],
         'b': 'lorem',
         'empty': ''
@@ -35,7 +35,7 @@ def test_contextual_norepeat():
 
 
 def test_contextual_norepeat_sparce():
-    g = text_generators.tracery.Grammar({
+    g = text_generators.Grammar({
         'a': ['a'],
         'b': ['a', 'b'],
         'empty': ''
@@ -47,7 +47,7 @@ def test_contextual_norepeat_sparce():
         assert g.flatten('#empty.norepeat(b)#') == 'b'
         mod.reset_norepeat()
 
-    g = text_generators.tracery.Grammar({
+    g = text_generators.Grammar({
         'a': ['a'],
         'b': ['a'],
         'empty': ''
@@ -61,7 +61,7 @@ def test_contextual_norepeat_sparce():
 
 
 def test_contextual_norepeat_inirect():
-    g = text_generators.tracery.Grammar({
+    g = text_generators.Grammar({
         'a': ['b'],
         'b': ['lorem'],
         'empty': ''
@@ -73,7 +73,7 @@ def test_contextual_norepeat_inirect():
 
 
 def test_contextual_gender():
-    g = text_generators.tracery.Grammar({
+    g = text_generators.Grammar({
         'female': 'a',
         'male': 'o',
         'bonito_a': 'bonita',
