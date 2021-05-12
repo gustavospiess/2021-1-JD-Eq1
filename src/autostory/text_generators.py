@@ -1,5 +1,5 @@
 import tracery
-import collections
+from collections.abc import Mapping
 from random import choice, sample
 from functools import partial, lru_cache
 from dataclasses import dataclass, field
@@ -74,10 +74,10 @@ def location_names():
     g = tracery.Grammar(_LOCATION_NAMES)
     while True:
         yield g.flatten('#main#')
-_location_names = location_names()
+_LOCATION_NAMES_GENERATOR = location_names()
 
 
-class ContextualModifiers(collections.abc.Mapping):
+class ContextualModifiers(Mapping):
 
     def __init__(self, grammar):
         self.grammar = grammar
@@ -89,10 +89,8 @@ class ContextualModifiers(collections.abc.Mapping):
         }
 
 
-    def gender(self, gender, text, flat=True): 
-        if flat:
-            return self.grammar.flatten(f'#{text}_{gender}#')
-        return f'{text}_{gender}'
+    def gender(self, gender, text): 
+        return self.grammar.flatten(f'#{text}_{gender}#')
 
 
     def norepeat(self, text=None, group=None):
@@ -146,11 +144,13 @@ class Substantive():
                 f'{prefix}_um': self.um,
                 }
 
-def m_substantive(word):
-    return Substantive(word, 'o', 'um')
+    @classmethod
+    def make_male(cls, word):
+        return cls(word, 'o', 'um')
 
-def f_substantive(word):
-    return Substantive(word, 'a', 'uma')
+    @classmethod
+    def make_female(cls, word):
+        return cls(word, 'a', 'uma')
 
 
 @dataclass(frozen=True)
@@ -201,7 +201,7 @@ class Flavor():
             return new
 
 
-map_flavor_list = [
+_MAP_FLAVOR_LIST = [
         Flavor((
             Adjective.make('decrépit'),
             Adjective.make('decaíd'),
@@ -233,7 +233,7 @@ map_flavor_list = [
             )),
         ]
 
-secondary_flavor_list = [
+_SECONDARY_FLAVOR_LIST = [
         Flavor((
             Adjective.make('empoeirad'),
             Adjective.make('suj'),
@@ -255,7 +255,7 @@ secondary_flavor_list = [
             )),
         ]
 
-terciary_flavor_list = [
+_TERCIARY_FLAVOR_LIST = [
         Flavor((
             Adjective.make_agender('com pó se acumulando nas superfícies', same=True),
             Adjective.make_agender('com teias de aranha', same=True),
@@ -284,7 +284,7 @@ terciary_flavor_list = [
 
 
 def composed_map_flavor():
-    return Flavor.join(*sample(map_flavor_list, 3))
+    return Flavor.join(*sample(_MAP_FLAVOR_LIST, 3))
 
 
 @dataclass(frozen=True)
@@ -306,22 +306,22 @@ class BasePlaceType():
 
 map_type = BaseMapType(
         (
-            f_substantive('mansão'),
-            m_substantive('castelo'),
-            m_substantive('casarão'),
+            Substantive.make_female('mansão'),
+            Substantive.make_male('castelo'),
+            Substantive.make_male('casarão'),
             ),
         (
-            f_substantive('cozinha'),
-            f_substantive('sala'),
-            f_substantive('sala de jantar'),
-            f_substantive('sala de estar'),
-            f_substantive('sala de Leitura'),
-            f_substantive('biblioteca'),
-            m_substantive('corredor'),
-            m_substantive('quarto de visitantes'),
-            m_substantive('quarto de empregados'),
-            m_substantive('quarto'),
-            m_substantive('atelie'),
+            Substantive.make_female('cozinha'),
+            Substantive.make_female('sala'),
+            Substantive.make_female('sala de jantar'),
+            Substantive.make_female('sala de estar'),
+            Substantive.make_female('sala de Leitura'),
+            Substantive.make_female('biblioteca'),
+            Substantive.make_male('corredor'),
+            Substantive.make_male('quarto de visitantes'),
+            Substantive.make_male('quarto de empregados'),
+            Substantive.make_male('quarto'),
+            Substantive.make_male('atelie'),
             )
         )
 
@@ -331,7 +331,7 @@ map_type = BaseMapType(
 class Map():
     base_type: 'BaseMapType' = field(default=map_type, init=False)
     flavor: 'Flavor' = field(default_factory=composed_map_flavor, init=False)
-    name: str = field(default_factory=lambda: next(_location_names), init=False)
+    name: str = field(default_factory=lambda: next(_LOCATION_NAMES_GENERATOR), init=False)
 
 
 class SuperContext():
@@ -404,9 +404,9 @@ class PlaceContext(SuperContext):
         nome = choice(_map_context._map.base_type.place_types)
         self._raw_grammar.update(nome.raw('tipo'))
 
-        flavor = choice(secondary_flavor_list)
+        flavor = choice(_SECONDARY_FLAVOR_LIST)
         self._raw_grammar.update(flavor.raw())
 
-        flavor = choice(terciary_flavor_list)
+        flavor = choice(_TERCIARY_FLAVOR_LIST)
         self._raw_grammar.update(flavor.raw('adjetivo_comp'))
 
