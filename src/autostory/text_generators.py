@@ -1,6 +1,6 @@
 from tracery import Grammar
 from collections.abc import Mapping
-from random import choice, sample
+from random import choice, sample, randint
 from functools import partial, lru_cache
 from typing import NamedTuple, NamedTupleMeta
 from abc import ABC, abstractproperty
@@ -289,54 +289,118 @@ class _MapType(NamedTuple):
 
 class _PlaceType(NamedTuple):
     desc: 'Substantive'
+    decorations: tuple
     repeat: bool = False
     dead_end: bool = False
 
 
+class _DecorationItem(NamedTuple):
+    desc: 'Substantive'
+
+
+_POLTRONA = _DecorationItem(
+        Substantive.make_female('poltrona')
+        )
+_SOFA = _DecorationItem(
+        Substantive.make_male('sofa')
+        )
+_CADEIRA = _DecorationItem(
+        Substantive.make_male('cadeira')
+        )
+_MESA = _DecorationItem(
+        Substantive.make_female('mesa')
+        )
+_MESA_DE_CENTRO = _DecorationItem(
+        Substantive.make_female('mesa de centro')
+        )
+_MESA_DE_CABECEIRA = _DecorationItem(
+        Substantive.make_female('mesa de cabeceira')
+        )
+_PIA = _DecorationItem(
+        Substantive.make_female('pia')
+        )
+_LAREIRA = _DecorationItem(
+        Substantive.make_female('lareira')
+        )
+_FOGAO = _DecorationItem(
+        Substantive.make_male('fogão')
+        )
+_CAMA = _DecorationItem(
+        Substantive.make_female('cama')
+        )
+_ESTANTE = _DecorationItem(
+        Substantive.make_female('estante')
+        )
+_ESPELHO = _DecorationItem(
+        Substantive.make_male('espelho')
+        )
+
+
+################################################################################
+
+
 _COZINHA = _PlaceType(
-        Substantive.make_female('cozinha'))
+        Substantive.make_female('cozinha'),
+        (_MESA, _PIA, _FOGAO, _LAREIRA, _ESTANTE))
 _SALA = _PlaceType(
         Substantive.make_female('sala'),
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA),
         repeat = True)
 _SALA_DE_JANTAR = _PlaceType(
-        Substantive.make_female('sala de jantar'))
+        Substantive.make_female('sala de jantar'),
+        (_CADEIRA, _MESA, _ESTANTE, _LAREIRA))
 _SALA_DE_ESTAR = _PlaceType(
-        Substantive.make_female('sala de estar'))
+        Substantive.make_female('sala de estar'),
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA))
 _SALA_DE_LEITURA = _PlaceType(
-        Substantive.make_female('sala de Leitura'))
+        Substantive.make_female('sala de Leitura'),
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA))
 _BIBLIOTECA = _PlaceType(
-        Substantive.make_female('biblioteca'))
+        Substantive.make_female('biblioteca'),
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA, _CADEIRA))
 _CORREDOR = _PlaceType(
         Substantive.make_male('corredor'),
+        (), #TODO
         repeat = True)
 _GALERIA = _PlaceType(
         Substantive.make_female('galeria'),
+        (), #TODO
         repeat = True)
 _QUARTO_DE_VISITANTES = _PlaceType(
         Substantive.make_male('quarto de visitantes'),
+        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, 
+            _ESTANTE, _MESA_DE_CENTRO, _ESPELHO),
         repeat = True)
 _QUARTO_DE_EMPREGADOS = _PlaceType(
         Substantive.make_male('quarto de empregados'),
+        (_CAMA, _MESA_DE_CABECEIRA, _CADEIRA, _ESTANTE),
         dead_end = True)
 _QUARTO = _PlaceType(
         Substantive.make_male('quarto'),
+        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, 
+            _ESTANTE, _MESA_DE_CENTRO, _ESPELHO),
         repeat = True)
 _CLOSET = _PlaceType(
         Substantive.make_male('closet'),
+        (_ESTANTE, _ESPELHO),
         repeat = True,
         dead_end = True)
 _DEPOSITO = _PlaceType(
         Substantive.make_male('Depósito'),
+        (_ESTANTE,),
         repeat = True,
         dead_end = True)
 _SOTAO = _PlaceType(
         Substantive.make_male('sótão'),
+        (), #TODO
         dead_end = True)
 _PORAO = _PlaceType(
         Substantive.make_male('Porão'),
+        (), #TODO
         dead_end = True)
 _ATELIE = _PlaceType(
-        Substantive.make_male('atelie'))
+        Substantive.make_male('atelie'),
+        ()) #TODO
 
 
 _MAP_TYPE = _MapType(
@@ -430,13 +494,10 @@ GrammerMakebla.register(Map)
 
 _PLACE_BASE_DESCRIPTION = ['''
         [temp:adjetivo_#tipo_o#] [temp2:adjetivo_comp_#tipo_o#]
-        #tipo_um# #tipo# #empty.norepeat(temp)# e #empty.norepeat(temp2)#
-        ''', '''
-        [temp:adjetivo_#tipo_o#]
-        #tipo_um# #tipo# #empty.norepeat(temp)#
-        ''','''
-        [temp2:adjetivo_comp_#tipo_o#]
-        #tipo_um# #tipo# #empty.norepeat(temp)# #empty.norepeat(temp2)# ''']
+        #tipo_um# #tipo# #empty.norepeat(temp)# e #empty.norepeat(temp2)#. ''', 
+        '''[temp:adjetivo_#tipo_o#]
+        #tipo_um# #tipo# #empty.norepeat(temp)#. ''',
+        '''[temp2:adjetivo_comp_#tipo_o#] #tipo_um# #tipo# #empty.norepeat(temp)# #empty.norepeat(temp2)#.''']
 
 
 class Place(NamedTuple):
@@ -445,26 +506,39 @@ class Place(NamedTuple):
     place_type: _PlaceType
     flavor_sec: _Flavor
     flavor_ter: _Flavor
-    base_description: str = '#desc#'
+    decorations: tuple
+    base_description: str = '#desc##decorations#'
 
     @classmethod
     def make(cls, place_type):
         nome = place_type.desc
         flavor_sec = choice(_PLACE_FLAVOR_LIST)
         flavor_ter = choice(_SECONDATY_PLACE_FLAVOR_LIST)
+
+        qtd_decorations = randint(0, len(place_type.decorations))
+        decorations = tuple(sample(place_type.decorations, k=qtd_decorations))
+
         return cls(
                 nome = nome,
                 place_type = place_type,
                 flavor_sec = flavor_sec,
-                flavor_ter = flavor_ter
+                flavor_ter = flavor_ter,
+                decorations = decorations
                 )
 
     @property
     def raw_grammar(self):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
+
+        if (self.decorations):
+            listed_decoration = '; '.join(map(lambda d: f'{d.desc.um} {d.desc.word}' ,self.decorations))
+            _raw_grammar['decorations'] = ' onde você pode ver ' + listed_decoration
+        else:
+            _raw_grammar['decorations'] = ''
+
         _raw_grammar.update(self.nome.raw('tipo'))
-        _raw_grammar.update(self.flavor_sec.raw('adjetivo_comp'))
+        _raw_grammar.update(self.flavor_sec.raw('adjetivo'))
         _raw_grammar.update(self.flavor_ter.raw('adjetivo_comp'))
         return _raw_grammar
 
