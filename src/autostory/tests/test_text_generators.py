@@ -87,9 +87,8 @@ def test_contextual_gender():
 def test_context_object():
     for _ in range(10):
         context = text_generators.Context()
-        assert context._map is not None
-        assert isinstance(context._map, text_generators.MapContext)
-        g = context._map.make_grammar()
+        assert context.map is not None
+        g = text_generators.make_grammar(context.map)
         assert g.flatten('#adjetivo#')
         assert g.flatten('#nome#')
         assert g.flatten('#tipo#')
@@ -98,15 +97,16 @@ def test_context_object():
 def test_map_generation_1():
     for _ in range(10):
         context = text_generators.Context()
-        d = context._map.describe()
+        d = text_generators.describe(context.map)
         assert d
 
 
 def test_place_generation():
     context = text_generators.Context()
     for _ in range(20):
-        place = context._map.make_place()
-        assert place.describe()
+        place = context.map.make_place()
+        d = text_generators.describe(place)
+        assert d
 
 
 def test_adjective_data_class():
