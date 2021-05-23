@@ -328,7 +328,7 @@ class _PlaceType(NamedTuple):
 
 class _DecorationItem(NamedTuple):
     desc: 'Substantive'
-    flavor: '_Flavor' = None
+    flavor_list: typing.Tuple['_Flavor'] = None
 
 
     @property
@@ -337,16 +337,10 @@ class _DecorationItem(NamedTuple):
         return {
                 'empty': '',
                 **self.desc.raw('nome'),
-                **self.flavor.raw(),
+                **choice(self.flavor_list).raw(),
                 'main': '#nome_um# #nome##_adjetivo#',
                 '_adjetivo': '[adj:adjetivo_#nome_o#]#_sub_adj#',
-                '_sub_adj': [
-                    '',
-                    '',
-                    ' #empty.norepeat(adj)#',
-                    ' #empty.norepeat(adj)#',
-                    ' #empty.norepeat(adj)#',
-                    ' #empty.norepeat(adj)# e #empty.norepeat(adj)#']
+                '_sub_adj': ['', ' #empty.norepeat(adj)#', ' #empty.norepeat(adj)#']
                 }
         
     @property
@@ -363,6 +357,8 @@ _BASE_DECORATION_FLAVOR = _Flavor((
         Adjective.make('velh'),
         Adjective.make('empoeirad'),
         Adjective.make('maltratad'),
+        Adjective.make('esquecid'),
+        Adjective.make('abadonad'),
         Adjective.make_agender('deplorável', same=True),
     ))
 
@@ -385,6 +381,9 @@ _FABRIC_DECORATION_FLAVOR = _Flavor((
 _USEBLAE_DECORATION_FLAVOR = _Flavor((
         Adjective.make_agender('com marcas de uso', same=True),
         Adjective.make_agender('que parece estar sem uso a anos', same=True),
+        Adjective.make_agender('que parece que ninguém usa a muito tempo', same=True),
+        Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} usad{g[2]} a muito tempo',
+            m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
     ))
 
 _ART_DECORATION_FLAVOR = _Flavor((
@@ -400,101 +399,123 @@ _ART_DECORATION_FLAVOR = _Flavor((
 
 _POLTRONA = _DecorationItem(
         Substantive.make_female('poltrona'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR)
+            _FABRIC_DECORATION_FLAVOR,)
         )
 _SOFA = _DecorationItem(
         Substantive.make_male('sofa'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR)
+            _FABRIC_DECORATION_FLAVOR,)
         )
 _CADEIRA = _DecorationItem(
         Substantive.make_female('cadeira'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR)
+            _WOODEN_DECORATION_FLAVOR,)
         )
 _MESA = _DecorationItem(
         Substantive.make_female('mesa'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR)
+            _WOODEN_DECORATION_FLAVOR,)
         )
 _MESA_DE_CENTRO = _DecorationItem(
         Substantive.make_female('mesa de centro'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR)
+            _WOODEN_DECORATION_FLAVOR,)
         )
 _MESA_DE_CABECEIRA = _DecorationItem(
         Substantive.make_female('mesa de cabeceira'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR)
+            _WOODEN_DECORATION_FLAVOR,)
         )
 _PIA = _DecorationItem(
         Substantive.make_female('pia'),
-        _BASE_DECORATION_FLAVOR
+        (
+            _BASE_DECORATION_FLAVOR,
+            _USEBLAE_DECORATION_FLAVOR,)
         )
 _LAREIRA = _DecorationItem(
         Substantive.make_female('lareira'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,)
         )
 _FOGAO = _DecorationItem(
         Substantive.make_male('fogão'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,)
         )
 _CAMA = _DecorationItem(
         Substantive.make_female('cama'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR)
+            _FABRIC_DECORATION_FLAVOR,)
         )
 _ESTANTE = _DecorationItem(
         Substantive.make_female('estante'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR)
+            _WOODEN_DECORATION_FLAVOR,)
+        )
+_ARMARIO = _DecorationItem(
+        Substantive.make_female('armario'),
+        (
+            _BASE_DECORATION_FLAVOR,
+            _USEBLAE_DECORATION_FLAVOR,
+            _WOODEN_DECORATION_FLAVOR,)
+        )
+_CRISTALEIRA = _DecorationItem(
+        Substantive.make_female('cristaleira'),
+        (
+            _BASE_DECORATION_FLAVOR,
+            _USEBLAE_DECORATION_FLAVOR,
+            _WOODEN_DECORATION_FLAVOR,)
         )
 _ESPELHO = _DecorationItem(
         Substantive.make_male('espelho'),
-        _BASE_DECORATION_FLAVOR
+        (
+            _BASE_DECORATION_FLAVOR,)
         )
 _QUADRO = _DecorationItem(
         Substantive.make_male('quadro'),
-        _Flavor.join(
+        (
+            _BASE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,
-            _ART_DECORATION_FLAVOR)
+            _ART_DECORATION_FLAVOR,
+            _ART_DECORATION_FLAVOR,)
         )
 _TAPETE = _DecorationItem(
         Substantive.make_male('tapete'),
-        _Flavor.join(
+        (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR)
+            _FABRIC_DECORATION_FLAVOR,)
         )
 _BUSTO = _DecorationItem(
         Substantive.make_male('busto'),
-        _BASE_DECORATION_FLAVOR
+        (
+            _BASE_DECORATION_FLAVOR,
+            _ART_DECORATION_FLAVOR,)
         )
 _LUSTRE = _DecorationItem(
         Substantive.make_male('lustre'),
-        _BASE_DECORATION_FLAVOR
+        (
+            _BASE_DECORATION_FLAVOR,)
         )
 
 
@@ -503,70 +524,74 @@ _LUSTRE = _DecorationItem(
 
 _COZINHA = _PlaceType(
         Substantive.make_female('cozinha'),
-        (_MESA, _PIA, _FOGAO, _LAREIRA, _ESTANTE,))
+        (_MESA, _PIA, _FOGAO, _LAREIRA, _ESTANTE, _ARMARIO, _CRISTALEIRA,))
 _SALA = _PlaceType(
         Substantive.make_female('sala'),
-        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA, _QUADRO,
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _ARMARIO, _CRISTALEIRA, _LAREIRA, _QUADRO,
             _TAPETE, _BUSTO, _LUSTRE,),
         repeat = True)
 _SALA_DE_JANTAR = _PlaceType(
         Substantive.make_female('sala de jantar'),
-        (_CADEIRA, _MESA, _ESTANTE, _LAREIRA,))
+        (_CADEIRA, _MESA, _ESTANTE, _ARMARIO, _CRISTALEIRA, _LAREIRA,))
 _SALA_DE_ESTAR = _PlaceType(
         Substantive.make_female('sala de estar'),
-        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA, _QUADRO,
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _ARMARIO, _CRISTALEIRA, _LAREIRA, _QUADRO,
             _TAPETE, _BUSTO, _LUSTRE,))
 _SALA_DE_LEITURA = _PlaceType(
         Substantive.make_female('sala de Leitura'),
-        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA, _QUADRO,
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _ARMARIO, _LAREIRA, _QUADRO,
             _TAPETE, _BUSTO, _LUSTRE,))
 _BIBLIOTECA = _PlaceType(
         Substantive.make_female('biblioteca'),
-        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _LAREIRA, _CADEIRA,
+        (_POLTRONA, _SOFA, _MESA_DE_CENTRO, _ESTANTE, _ARMARIO, _LAREIRA, _CADEIRA,
             _QUADRO, _TAPETE, _BUSTO, _LUSTRE,))
 _CORREDOR = _PlaceType(
         Substantive.make_male('corredor'),
-        (_QUADRO, _TAPETE, _BUSTO, _LUSTRE, _MESA_DE_CENTRO), #TODO
+        (_QUADRO, _TAPETE, _BUSTO, _LUSTRE, _MESA_DE_CENTRO),
         repeat = True)
 _GALERIA = _PlaceType(
         Substantive.make_female('galeria'),
-        (_QUADRO, _TAPETE, _BUSTO, _LUSTRE, _MESA_DE_CENTRO,), #TODO
+        (_QUADRO, _TAPETE, _BUSTO, _LUSTRE, _MESA_DE_CENTRO,),
         repeat = True)
 _QUARTO_DE_VISITANTES = _PlaceType(
         Substantive.make_male('quarto de visitantes'),
-        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, 
-            _ESTANTE, _MESA_DE_CENTRO, _ESPELHO,),
+        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, _SOFA, 
+            _ESTANTE, _ARMARIO, _MESA_DE_CENTRO, _ESPELHO,),
         repeat = True)
 _QUARTO_DE_EMPREGADOS = _PlaceType(
         Substantive.make_male('quarto de empregados'),
-        (_CAMA, _MESA_DE_CABECEIRA, _CADEIRA, _ESTANTE,),
+        (_CAMA, _MESA_DE_CABECEIRA, _CADEIRA, _ESTANTE, _ARMARIO,),
         dead_end = True)
 _QUARTO = _PlaceType(
         Substantive.make_male('quarto'),
-        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, 
-            _ESTANTE, _MESA_DE_CENTRO, _ESPELHO, _QUADRO, _TAPETE,),
+        (_CAMA, _MESA_DE_CABECEIRA, _LAREIRA, _CADEIRA, _POLTRONA, _SOFA, 
+            _ESTANTE, _ARMARIO, _MESA_DE_CENTRO, _ESPELHO, _QUADRO, _TAPETE,),
         repeat = True)
 _CLOSET = _PlaceType(
         Substantive.make_male('closet'),
-        (_ESTANTE, _ESPELHO,),
+        (_ESTANTE, _ARMARIO, _ESPELHO,),
         repeat = True,
         dead_end = True)
 _DEPOSITO = _PlaceType(
         Substantive.make_male('Depósito'),
-        (_ESTANTE,),
+        (_ESTANTE, _ARMARIO,),
         repeat = True,
         dead_end = True)
 _SOTAO = _PlaceType(
         Substantive.make_male('sótão'),
-        (), #TODO
+        (_CAMA, _MESA_DE_CABECEIRA, _CADEIRA, _POLTRONA, _SOFA, _ESTANTE,
+            _ARMARIO, _MESA_DE_CENTRO, _ESPELHO, _QUADRO, _TAPETE,
+            _CRISTALEIRA,),
         dead_end = True)
 _PORAO = _PlaceType(
         Substantive.make_male('Porão'),
-        (), #TODO
+        (_CAMA, _MESA_DE_CABECEIRA, _CADEIRA, _POLTRONA, _SOFA, _ESTANTE,
+            _ARMARIO, _MESA_DE_CENTRO, _ESPELHO, _QUADRO, _TAPETE,
+            _CRISTALEIRA,),
         dead_end = True)
 _ATELIE = _PlaceType(
         Substantive.make_male('atelie'),
-        ()) #TODO
+        (_QUADRO, _ESPELHO, _ARMARIO, _MESA, _TAPETE, _BUSTO))
 
 
 _MAP_TYPE = _MapType(
