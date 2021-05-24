@@ -25,7 +25,7 @@ def test_contextual_norepeat():
         'b': 'lorem',
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g)
+    mod = text_generators.ContextualModifiers(g, text_generators.Context())
     g.add_modifiers(mod)
     for i in range(50):
         assert len({g.flatten('#empty.norepeat(a)#') for _ in range(49)}) == 49
@@ -40,7 +40,7 @@ def test_contextual_norepeat_sparce():
         'b': ['a', 'b'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g)
+    mod = text_generators.ContextualModifiers(g, text_generators.Context())
     g.add_modifiers(mod)
     for i in range(50):
         g.flatten('#empty.norepeat(a)#')
@@ -52,7 +52,7 @@ def test_contextual_norepeat_sparce():
         'b': ['a'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g)
+    mod = text_generators.ContextualModifiers(g, text_generators.Context())
     g.add_modifiers(mod)
     for i in range(50):
         g.flatten('#empty.norepeat(a)#')
@@ -66,7 +66,7 @@ def test_contextual_norepeat_inirect():
         'b': ['lorem'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g)
+    mod = text_generators.ContextualModifiers(g, text_generators.Context())
     g.add_modifiers(mod)
     assert g.flatten('#empty.norepeat(a)#') == 'lorem'
 
@@ -79,7 +79,7 @@ def test_contextual_gender():
         'bonito_a': 'bonita',
         'bonito_o': 'bonito',
         })
-    mod = text_generators.ContextualModifiers(g)
+    mod = text_generators.ContextualModifiers(g, text_generators.Context())
     g.add_modifiers(mod)
     assert g.flatten('#female.gender(bonito)#') == 'bonita'
     assert g.flatten('#male.gender(bonito)#') == 'bonito'

@@ -16,14 +16,12 @@ class GrammerMakebla(ABC):
         pass
 
     @abstractproperty
-    def raw_grammar(self):
+    def grammar(self):
         pass
 
-
+@lru_cache
 def make_grammar(grammerMakebla: GrammerMakebla):
-    g = Grammar(grammerMakebla.raw_grammar)
-    g.add_modifiers(ContextualModifiers(g))
-    return g
+    return grammerMakebla.grammar
 
 
 def describe(grammerMakebla: GrammerMakebla):
@@ -105,10 +103,9 @@ def location_names():
 
 class ContextualModifiers(Mapping):
 
-    def __init__(self, grammar):
+    def __init__(self, grammar, context=None):
         self.grammar = grammar
-        self.__norepeat = {}
-        self.__norepeat_said = set()
+        self.context = context
         self.__mapping = {
             'norepeat': partial(self.norepeat),
             'gender': partial(self.gender)
@@ -119,30 +116,20 @@ class ContextualModifiers(Mapping):
 
     def norepeat(self, text=None, group=None):
         symbols = self.grammar.symbols
-        if group in symbols and isinstance(symbols[group].raw_rules, list):
-            sym = symbols[group]
-            raw = sym.raw_rules
-            if len(raw) == 1 and raw[0] in symbols and raw[0] != group: 
-                return self.norepeat(text, raw[0])
-            if group not in self.__norepeat or not self.__norepeat[group]:
-                self.__norepeat[group] = {i for i in raw}
-            new_text = None
-            while (new_text is None and self.__norepeat[group]):
-                new_text = choice(tuple(self.__norepeat[group]))
-                self.__norepeat[group] = self.__norepeat[group] - {new_text}
-                if new_text in self.__norepeat_said:
-                    new_text = None
-            if new_text is None:
-                self.reset_norepeat()
-                return self.norepeat(text, group)
-            self.__norepeat_said.add(new_text)
-            return new_text
-        else:
+
+        if group not in symbols or not isinstance(symbols[group].raw_rules, list):
             return text
+        
+        options = symbols[group].raw_rules
+        if len(options) == 1 and options[0] in symbols and options[0] != group: 
+            # Sometimes the text to be not repeated is nested to treat gender
+            # I know it is not pretty nut I am neither and I'm not complaining
+            return self.norepeat(text, options[0])
+        return self.context.norepeat(options)
+
 
     def reset_norepeat(self):
-        self.__norepeat = {}
-        self.__norepeat_said = set()
+        self.context._reset_norepeat_said()
 
     def __getitem__(self, key):
         return self.__mapping[key]
@@ -159,12 +146,15 @@ class Substantive(NamedTuple):
     o: str
     um: str
 
-    def raw(self, prefix):
-        return {
+    def raw(self, prefix, context=None):
+        rw = {
                 f'{prefix}': self.word,
                 f'{prefix}_o': self.o,
                 f'{prefix}_um': self.um,
                 }
+        if context:
+            context._register_norepeat_map(set(rw.values()))
+        return rw
 
     @classmethod
     def make_male(cls, word):
@@ -207,13 +197,27 @@ class Adjective(NamedTuple):
 class _Flavor(NamedTuple):
     adjectives: typing.Tuple['Adjective'] = tuple()
 
-    def raw(self, adj = 'adjetivo'):
-        return {
-                f'{adj}_o': [a.m for a in self.adjectives],
-                f'{adj}_os': [a.ms for a in self.adjectives],
-                f'{adj}_a': [a.f for a in self.adjectives],
-                f'{adj}_as': [a.fs for a in self.adjectives]
+    def raw(self, adj = 'adjetivo', context=None):
+        m  = []
+        ms = []
+        f  = []
+        fs = []
+
+        for a in self.adjectives:
+            m.append(a.m)
+            ms.append(a.ms)
+            f.append(a.f)
+            fs.append(a.fs)
+            if context:
+                context._register_norepeat_map(set(a))
+                
+        rw = {
+                f'{adj}_o':  m,
+                f'{adj}_os': ms,
+                f'{adj}_a':  f,
+                f'{adj}_as': fs
                 }
+        return rw
 
     @classmethod
     @lru_cache
@@ -313,42 +317,22 @@ class _MapType(NamedTuple):
     desc: typing.Tuple['Substantive']
     place_types: typing.Tuple['_PlaceType']
 
-    def raw(self, prefix=''):
+    def raw(self, prefix='', context=None):
         return {
-                 **choice(self.desc).raw(prefix)
+                 **choice(self.desc).raw(prefix, context=context)
                 }
 
 
 class _PlaceType(NamedTuple):
     desc: 'Substantive'
-    decorations: typing.Tuple[typing.Tuple[typing.Optional['_DecorationItem']]]
+    decorations: typing.Tuple[typing.Tuple[typing.Optional['_DecorationItemType']]]
     repeat: bool = False
     dead_end: bool = False
 
 
-class _DecorationItem(NamedTuple):
+class _DecorationItemType(NamedTuple):
     desc: 'Substantive'
     flavor_list: typing.Tuple['_Flavor'] = None
-
-
-    @property
-    @lru_cache
-    def raw_grammar(self):
-        return {
-                'empty': '',
-                **self.desc.raw('nome'),
-                **choice(self.flavor_list).raw(),
-                'main': '#nome_um# #nome##_adjetivo#',
-                '_adjetivo': '[adj:adjetivo_#nome_o#]#_sub_adj#',
-                '_sub_adj': ['', ' #empty.norepeat(adj)#', ' #empty.norepeat(adj)#']
-                }
-        
-    @property
-    @lru_cache
-    def base_description(self):
-        return '#main#'
-
-GrammerMakebla.register(_DecorationItem)
 
 
 _BASE_DECORATION_FLAVOR = _Flavor((
@@ -437,67 +421,67 @@ _ART_DECORATION_FLAVOR = _Flavor((
 ####
 
 
-_POLTRONA = _DecorationItem(
+_POLTRONA = _DecorationItemType(
         Substantive.make_female('poltrona'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _FABRIC_DECORATION_FLAVOR,)
         )
-_SOFA = _DecorationItem(
+_SOFA = _DecorationItemType(
         Substantive.make_male('sofa'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _FABRIC_DECORATION_FLAVOR,)
         )
-_CADEIRA = _DecorationItem(
+_CADEIRA = _DecorationItemType(
         Substantive.make_female('cadeira'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_MESA = _DecorationItem(
+_MESA = _DecorationItemType(
         Substantive.make_female('mesa'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_MESA_DE_CENTRO = _DecorationItem(
+_MESA_DE_CENTRO = _DecorationItemType(
         Substantive.make_female('mesa de centro'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_MESA_DE_CABECEIRA = _DecorationItem(
+_MESA_DE_CABECEIRA = _DecorationItemType(
         Substantive.make_female('mesa de cabeceira'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_PIA = _DecorationItem(
+_PIA = _DecorationItemType(
         Substantive.make_female('pia'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,)
         )
-_LAREIRA = _DecorationItem(
+_LAREIRA = _DecorationItemType(
         Substantive.make_female('lareira'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,)
         )
-_FOGAO = _DecorationItem(
+_FOGAO = _DecorationItemType(
         Substantive.make_male('fogão'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,)
         )
-_CAMA = _DecorationItem(
+_CAMA = _DecorationItemType(
         Substantive.make_female('cama'),
         (
             _BASE_DECORATION_FLAVOR,
@@ -505,33 +489,33 @@ _CAMA = _DecorationItem(
             _USEBLAE_DECORATION_FLAVOR,
             _FABRIC_DECORATION_FLAVOR,)
         )
-_ESTANTE = _DecorationItem(
+_ESTANTE = _DecorationItemType(
         Substantive.make_female('estante'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_ARMARIO = _DecorationItem(
+_ARMARIO = _DecorationItemType(
         Substantive.make_male('armario'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_CRISTALEIRA = _DecorationItem(
+_CRISTALEIRA = _DecorationItemType(
         Substantive.make_female('cristaleira'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _WOODEN_DECORATION_FLAVOR,)
         )
-_ESPELHO = _DecorationItem(
+_ESPELHO = _DecorationItemType(
         Substantive.make_male('espelho'),
         (
             _BASE_DECORATION_FLAVOR,)
         )
-_QUADRO = _DecorationItem(
+_QUADRO = _DecorationItemType(
         Substantive.make_male('quadro'),
         (
             _BASE_DECORATION_FLAVOR,
@@ -539,20 +523,20 @@ _QUADRO = _DecorationItem(
             _ART_DECORATION_FLAVOR,
             _ART_DECORATION_FLAVOR,)
         )
-_TAPETE = _DecorationItem(
+_TAPETE = _DecorationItemType(
         Substantive.make_male('tapete'),
         (
             _BASE_DECORATION_FLAVOR,
             _USEBLAE_DECORATION_FLAVOR,
             _FABRIC_DECORATION_FLAVOR,)
         )
-_BUSTO = _DecorationItem(
+_BUSTO = _DecorationItemType(
         Substantive.make_male('busto'),
         (
             _BASE_DECORATION_FLAVOR,
             _ART_DECORATION_FLAVOR,)
         )
-_LUSTRE = _DecorationItem(
+_LUSTRE = _DecorationItemType(
         Substantive.make_male('lustre'),
         (
             _BASE_DECORATION_FLAVOR,)
@@ -797,6 +781,7 @@ queria estar.'''
 
 
 class Map(NamedTuple):
+    context: 'Context'
     base_type: '_MapType'
     flavor: '_Flavor'
     name: str
@@ -809,12 +794,13 @@ class Map(NamedTuple):
         return _Flavor.join(*sample(_MAP_FLAVOR_LIST, 3))
 
     @classmethod
-    def make(cls):
+    def make(cls, context):
         base_type: '_MapType' = _MAP_TYPE
         flavor: '_Flavor' = cls._composed_map_flavor()
         name: str = next(cls._LOCATION_NAMES_GENERATOR)
 
         return cls(
+                context = context,
                 base_type=base_type,
                 flavor=flavor,
                 name=name,
@@ -822,21 +808,64 @@ class Map(NamedTuple):
 
     def make_place(self):
         place_type = choice(self.base_type.place_types) 
-        return Place.make(place_type)
+        return Place.make(place_type, self.context)
 
 
     @property
     @lru_cache
-    def raw_grammar(self):
+    def __raw_grammar(self):
         return {
                 'empty': '',
                 'nome': self.name,
-                **self.flavor.raw(),
-                **self.base_type.raw('tipo')
+                **self.flavor.raw(context=self.context),
+                **self.base_type.raw('tipo', context=self.context)
                 }
 
+    @property
+    @lru_cache
+    def grammar(self):
+        g = Grammar(self.__raw_grammar)
+        g.add_modifiers(ContextualModifiers(g, self.context))
+        return g
 
 GrammerMakebla.register(Map)
+
+
+class DecorationItem(NamedTuple):
+    decoration_type: '_DecorationItemType'
+    context: 'Context'
+
+    @property
+    @lru_cache
+    def desc(self):
+        return self.decoration_type.desc
+
+    @property
+    @lru_cache
+    def __raw_grammar(self):
+        deco = self.decoration_type
+        return {
+                'empty': '',
+                **deco.desc.raw('nome', context=self.context),
+                **choice(deco.flavor_list).raw(context=self.context),
+                'main': '#nome_um# #nome##_adjetivo#',
+                '_adjetivo': '[adj:adjetivo_#nome_o#]#_sub_adj#',
+                '_sub_adj': ['', ' #empty.norepeat(adj)#', ' #empty.norepeat(adj)#']
+                }
+
+    @property
+    @lru_cache
+    def base_description(self):
+        return '#main#'
+
+    @property
+    @lru_cache
+    def grammar(self):
+        g = Grammar(self.__raw_grammar)
+        g.add_modifiers(ContextualModifiers(g, self.context))
+        return g
+
+GrammerMakebla.register(DecorationItem)
 
 
 _PLACE_BASE_DESCRIPTION = ['''
@@ -848,29 +877,24 @@ _PLACE_BASE_DESCRIPTION = ['''
 
 
 class Place(NamedTuple):
-
+    context: 'Context'
     nome:str
     place_type: _PlaceType
     flavor_sec: _Flavor
     flavor_ter: _Flavor
-    decorations: typing.Tuple['_DecorationItem']
+    decorations: typing.Tuple['DecorationItem']
     base_description: str = '#desc##decorations#'
 
     @classmethod
-    def make(cls, place_type):
+    def make(cls, place_type, context):
         nome = place_type.desc
         flavor_sec = choice(_PLACE_FLAVOR_LIST)
         flavor_ter = choice(_SECONDATY_PLACE_FLAVOR_LIST)
 
-        # qtd_possible_deco = len(place_type.decorations)
-        # qtd_max_deco = round(qtd_possible_deco/3*2)
-        # mean_deco = round(qtd_possible_deco/2)
-        # qtd_decorations = min(1+abs(round(random.normalvariate(mean_deco, mean_deco))), qtd_max_deco)
-        # decorations = tuple(sample(place_type.decorations, k=qtd_decorations))
-
-        decorations = tuple(deco for deco in map(choice, place_type.decorations) if deco is not None)
+        decorations = tuple(DecorationItem(deco, context) for deco in map(choice, place_type.decorations) if deco is not None)
 
         return cls(
+                context = context,
                 nome = nome,
                 place_type = place_type,
                 flavor_sec = flavor_sec,
@@ -879,7 +903,7 @@ class Place(NamedTuple):
                 )
 
     @property
-    def raw_grammar(self):
+    def __raw_grammar(self):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
 
@@ -899,9 +923,52 @@ class Place(NamedTuple):
         _raw_grammar.update(self.flavor_ter.raw('adjetivo_comp'))
         return _raw_grammar
 
+    @property
+    @lru_cache
+    def grammar(self):
+        g = Grammar(self.__raw_grammar)
+        g.add_modifiers(ContextualModifiers(g, self.context))
+        return g
+
 
 GrammerMakebla.register(Map)
 
 
-class Context(NamedTuple):
-    map: 'Map' = Map.make()
+class Context():
+    def __init__(self):
+        self.map = Map.make(self)
+        self._norepeat_said = set()
+        self._norepeat_map = list()
+
+    def norepeat(self, options):
+        option_set = set(options)
+        if option_set <= self._norepeat_said:
+            self._reset_norepeat_said(option_set)
+        text = choice(tuple(set(options) - self._norepeat_said))
+        self._update_norepeat_said(text)
+        return text
+
+    def _update_norepeat_said(self, text):
+        for group in self._norepeat_map:
+            if text in group:
+                self._norepeat_said |= group
+                break
+        else:
+            self._norepeat_map.append({text})
+            self._norepeat_said |= {text}
+
+
+    def _register_norepeat_map(self, options):
+        for group in self._norepeat_map:
+            if any(op in group for op in options):
+                group |= options
+                break
+        else:
+            self._norepeat_map.append(options)
+
+    def _reset_norepeat_said(self, option_set=None):
+        if option_set is None:
+            self._norepeat_said = set()
+            return
+        self._norepeat_said -= option_set
+
