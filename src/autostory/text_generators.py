@@ -907,17 +907,14 @@ class Place(NamedTuple):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
 
-        if (self.decorations):
-            decor_desc_tuple = tuple(describe(d) for d in self.decorations)
-            if (len(decor_desc_tuple) > 1):
-                decor_desc_tuple = tuple(sorted(decor_desc_tuple, key=len))
-                listed_decoration = ', '.join(decor_desc_tuple[:-1]) + f' e {decor_desc_tuple[-1]}'
-            else:
-                listed_decoration = decor_desc_tuple[0]
-            _raw_grammar['decorations'] = ' onde você pode ver ' + listed_decoration
+        decor_desc_tuple = tuple(describe(d) for d in self.decorations)
+        if (len(decor_desc_tuple) > 1):
+            decor_desc_tuple = tuple(sorted(decor_desc_tuple, key=len))
+            listed_decoration = ', '.join(decor_desc_tuple[:-1]) + f' e {decor_desc_tuple[-1]}'
         else:
-            _raw_grammar['decorations'] = ''
+            listed_decoration = decor_desc_tuple[0]
 
+        _raw_grammar['decorations'] = ' onde você pode ver ' + listed_decoration
         _raw_grammar.update(self.nome.raw('tipo'))
         _raw_grammar.update(self.flavor_sec.raw('adjetivo'))
         _raw_grammar.update(self.flavor_ter.raw('adjetivo_comp'))

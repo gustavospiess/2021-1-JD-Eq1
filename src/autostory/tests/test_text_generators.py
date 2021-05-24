@@ -111,6 +111,3 @@ def test_place_generation():
             assert ' e ' in desc
             for deco in place.decorations:
                 assert deco.desc.word in desc
-        print(desc)
-        print()
-    assert 0
