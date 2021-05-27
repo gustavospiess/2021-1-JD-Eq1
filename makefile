@@ -3,16 +3,6 @@
 SHELL := /bin/bash
 .PHONY: build test publish depend publish-test
 
-build:
-	rm dist/*
-	source bin/activate && python setup.py sdist bdist_wheel
-
-publish:
-	source bin/activate && python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
-
-publish-test:
-	source bin/activate && python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
 test:
 	source bin/activate && python -m pytest
 
@@ -29,3 +19,9 @@ ipython:
 
 freeze:
 	source bin/activate && python -m pip freeze > requirements_dev.txt
+
+publish:
+	source bin/activate && python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+
+publish-test:
+	source bin/activate && python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
