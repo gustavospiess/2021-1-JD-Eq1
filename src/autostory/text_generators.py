@@ -1,33 +1,35 @@
 from tracery import Grammar
-from collections.abc import Mapping
 from random import choice, sample, randint
 from functools import partial, lru_cache
-from typing import NamedTuple, NamedTupleMeta
 from abc import ABC, abstractproperty
-import typing
-
-
-import random
+from typing import NamedTuple, Mapping, Union, Dict, List, Callable, Any, Tuple, Optional, Set
 
 
 class GrammerMakebla(ABC):
-    @abstractproperty
-    def base_description(self):
-        pass
+    RAW_GRAMMAR_TYPE = Dict[str, Union[str, List[str]]]
 
     @abstractproperty
-    def grammar(self):
+    def base_description(self) -> str:
+        return super().base_description
+
+    @abstractproperty
+    def context(self) -> 'Context':
+        return super().context
+
+    @abstractproperty
+    def raw_grammar(self) -> RAW_GRAMMAR_TYPE:
         pass
 
-@lru_cache
-def make_grammar(grammerMakebla: GrammerMakebla):
-    return grammerMakebla.grammar
+    @property
+    @lru_cache
+    def grammar(self) -> Grammar:
+        g = Grammar(self.raw_grammar)
+        g.add_modifiers(ContextualModifiers(g, self.context))
+        return g
 
-
-def describe(grammerMakebla: GrammerMakebla):
-    grammar = make_grammar(grammerMakebla)
-    desc = grammar.flatten(grammerMakebla.base_description)
-    return desc.replace('\n', ' ').strip()
+    def describe(self) -> str:
+        desc = self.grammar.flatten(self.base_description)
+        return desc.replace('\n', ' ').replace('  ', ' ').replace(' .', '.').strip()
 
 
 _MONSTER_NAME = {
@@ -40,7 +42,7 @@ _MONSTER_NAME = {
         }
 
 
-def monster_names():
+def monster_names() -> str:
     g = Grammar(_MONSTER_NAME)
     while True:
         yield g.flatten('#main#')
@@ -74,7 +76,7 @@ _INTRO_LETTER = {
         }
 
 
-def intro_letter():
+def intro_letter() -> str:
     g = Grammar(_INTRO_LETTER)
     while True:
         yield g.flatten('#main#')
@@ -95,13 +97,12 @@ _LOCATION_NAMES = {
         }
 
 
-def location_names():
+def location_names() -> str:
     g = Grammar(_LOCATION_NAMES)
     while True:
         yield g.flatten('#main#')
 
-
-class ContextualModifiers(Mapping):
+class ContextualModifiers(Mapping['str', Callable[[str, Any], str]]):
 
     def __init__(self, grammar, context=None):
         self.grammar = grammar
@@ -111,10 +112,10 @@ class ContextualModifiers(Mapping):
             'gender': partial(self.gender)
         }
 
-    def gender(self, gender, text): 
+    def gender(self, gender, text) -> str: 
         return self.grammar.flatten(f'#{text}_{gender}#')
 
-    def norepeat(self, text=None, group=None):
+    def norepeat(self, text=None, group=None) -> str:
         symbols = self.grammar.symbols
 
         if group not in symbols or not isinstance(symbols[group].raw_rules, list):
@@ -128,10 +129,10 @@ class ContextualModifiers(Mapping):
         return self.context.norepeat(options)
 
 
-    def reset_norepeat(self):
+    def reset_norepeat(self) -> None:
         self.context._reset_norepeat_said()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Callable[[str, Any], str]:
         return self.__mapping[key]
 
     def __iter__(self):
@@ -195,7 +196,7 @@ class Adjective(NamedTuple):
 
 
 class _Flavor(NamedTuple):
-    adjectives: typing.Tuple['Adjective'] = tuple()
+    adjectives: Tuple['Adjective'] = tuple()
 
     def raw(self, adj = 'adjetivo', context=None):
         m  = []
@@ -314,8 +315,9 @@ _SECONDATY_PLACE_FLAVOR_LIST = [
 
 
 class _MapType(NamedTuple):
-    desc: typing.Tuple['Substantive']
-    place_types: typing.Tuple['_PlaceType']
+    desc: Tuple['Substantive']
+    place_types: Tuple['_PlaceType']
+    passage_types: Tuple['_PassageType']
 
     def raw(self, prefix='', context=None):
         return {
@@ -325,17 +327,41 @@ class _MapType(NamedTuple):
 
 class _PlaceType(NamedTuple):
     desc: 'Substantive'
-    decorations: typing.Tuple[typing.Tuple[typing.Optional['_DecorationItemType']]]
+    decorations: Tuple[Tuple[Optional['_DecorationItemType']]]
     repeat: bool = False
-    dead_end: bool = False
 
 
-class _DecorationItemType(NamedTuple):
+class _ItemType(NamedTuple):
     desc: 'Substantive'
-    flavor_list: typing.Tuple['_Flavor'] = None
+    flavor_list: Tuple['_Flavor']
 
 
-_BASE_DECORATION_FLAVOR = _Flavor((
+class _PassageType(NamedTuple):
+    a_side: 'Substantive'
+    b_side: 'Substantive'
+    flavor_list: Tuple['_Flavor']
+    lockable: bool = False
+    exclusive_lockable: bool = False
+
+    @classmethod
+    def make_unsided(cls,
+            desc: 'Substantive',
+            flavor_list: Tuple['_Flavor'],
+            lockable: bool = False,
+            exclusive_lockable: bool = False):
+        return cls(desc, desc, flavor_list, lockable, exclusive_lockable)
+
+
+class _DecorationItemType(_ItemType):
+    pass
+
+
+################################################################################
+
+
+_NULL_ITEM_FLAVOR = _Flavor((Adjective('', '', '', ''),))
+
+_BASE_ITEM_FLAVOR = _Flavor((
         Adjective.make('suj'),
         Adjective.make('muito suj'),
         Adjective.make('imund'),
@@ -347,7 +373,7 @@ _BASE_DECORATION_FLAVOR = _Flavor((
         Adjective.make('esquecid'),
         Adjective.make('abadonad'),
         Adjective.make('nojent'),
-        Adjective.make_agender('deplorável', same=True),
+        Adjective.make_agender('deplorável', rad_s='deploráveis'),
         Adjective.make_format(lambda g: f'que parece{g[0]} que est{g[1]} suj{g[2]} a muito tempo',
             m=('', 'á', 'o'), ms=('m', 'ão', 'o'), f=('', 'á', 'a'), fs=('m', 'ão', 'as')),
         Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} limp{g[2]} a muito tempo',
@@ -355,12 +381,12 @@ _BASE_DECORATION_FLAVOR = _Flavor((
     ))
 
 
-_WOODEN_DECORATION_FLAVOR = _Flavor((
+_WOODEN_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de madeira', same=True),
         Adjective.make_agender('de madeira podre', same=True),
         Adjective.make_agender('de madeira maciça', same=True),
         Adjective.make_format(lambda g: f'feit{g} de madeira'),
-        Adjective.make_format(lambda g: f' que feit{g} de madeira podre'),
+        Adjective.make_format(lambda g: f' que é feit{g} de madeira podre'),
         Adjective.make_agender('com lascas faltando', same=True),
         Adjective.make_agender('que está com lascas faltando', same=True),
         Adjective.make('lascad'),
@@ -368,7 +394,7 @@ _WOODEN_DECORATION_FLAVOR = _Flavor((
     ))
 
 
-_FABRIC_DECORATION_FLAVOR = _Flavor((
+_FABRIC_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de tecido', same=True),
         Adjective.make_format(lambda g: f'feit{g} de tecido'),
         Adjective.make_format(lambda g: f'de tecido e chei{g} de rasgos'),
@@ -381,7 +407,7 @@ _FABRIC_DECORATION_FLAVOR = _Flavor((
     ))
 
 
-_USEBLAE_DECORATION_FLAVOR = _Flavor((
+_USEBLAE_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('com marcas de uso', same=True),
         Adjective.make_agender('com muitas marcas de uso', same=True),
         Adjective.make_agender('que parece estar sem uso a anos', same=True),
@@ -397,7 +423,7 @@ _USEBLAE_DECORATION_FLAVOR = _Flavor((
     ))
 
 
-_ART_DECORATION_FLAVOR = _Flavor((
+_ART_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de péssimo gosto', same=True),
         Adjective.make('macabr'),
         Adjective.make('horroros'),
@@ -406,11 +432,7 @@ _ART_DECORATION_FLAVOR = _Flavor((
         Adjective.make('horroros'),
         Adjective.make('sinistr'),
         Adjective.make('bastante macabr'),
-        Adjective.make('bastante horroros'),
         Adjective.make('bastante sinistr'),
-        Adjective.make('muito macabr'),
-        Adjective.make('muito horroros'),
-        Adjective.make('muito sinistr'),
         Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
         Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
         Adjective.make_format(lambda g: f'bastante atormentador{g}', m='', ms='es'),
@@ -418,128 +440,257 @@ _ART_DECORATION_FLAVOR = _Flavor((
     ))
 
 
-####
+################################################################################
+
+
+_ESCADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('escada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            ),
+        lockable=False
+        )
+
+
+_PASSAGEM = _PassageType.make_unsided(
+        desc = Substantive.make_female('passagem'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            ),
+        lockable=False
+        )
+
+
+_PASSAGEM_ADORNADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('passagem adornada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,
+            ),
+        lockable=False
+        )
+
+
+_PORTA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR
+            ),
+        lockable=True
+        )
+
+
+_PORTA_DUPLA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta dupla'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR
+            ),
+        lockable=True
+        )
+
+
+_PORTA_ADORNADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta adornada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR
+            ),
+        lockable=True
+        )
+
+
+_PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
+        desc = Substantive.make_female('estante de livros'),
+        flavor_list = (
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,),
+        lockable=True,
+        exclusive_lockable=True
+        )
+
+
+_PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
+        desc = Substantive.make_male('quadro'),
+        flavor_list = (
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,),
+        lockable=True,
+        exclusive_lockable=True
+        )
+
+
+_PORTA_TIJOLADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta fechada com tijolos'),
+        flavor_list = (
+            _NULL_ITEM_FLAVOR,
+            ),
+        lockable=True,
+        exclusive_lockable=True
+        )
+
+
+_PORTA_TABOAS = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta fechada com tábuas'),
+        flavor_list = (
+            _NULL_ITEM_FLAVOR,
+            ),
+        lockable=True,
+        exclusive_lockable=True
+        )
+
+
+_PORTA_COM_CADEADO = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta com um cadeado'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR
+            ),
+        lockable=True
+        )
+
+
+################################################################################
 
 
 _POLTRONA = _DecorationItemType(
         Substantive.make_female('poltrona'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _FABRIC_ITEM_FLAVOR,)
         )
 _SOFA = _DecorationItemType(
         Substantive.make_male('sofa'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _FABRIC_ITEM_FLAVOR,)
         )
 _CADEIRA = _DecorationItemType(
         Substantive.make_female('cadeira'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _MESA = _DecorationItemType(
         Substantive.make_female('mesa'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _MESA_DE_CENTRO = _DecorationItemType(
         Substantive.make_female('mesa de centro'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _MESA_DE_CABECEIRA = _DecorationItemType(
         Substantive.make_female('mesa de cabeceira'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _PIA = _DecorationItemType(
         Substantive.make_female('pia'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,)
         )
 _LAREIRA = _DecorationItemType(
         Substantive.make_female('lareira'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,)
         )
 _FOGAO = _DecorationItemType(
         Substantive.make_male('fogão'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,)
         )
 _CAMA = _DecorationItemType(
         Substantive.make_female('cama'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _FABRIC_ITEM_FLAVOR,)
         )
 _ESTANTE = _DecorationItemType(
         Substantive.make_female('estante'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
+        )
+_ESTANTE_DE_LIVROS = _DecorationItemType(
+        Substantive.make_female('estante de livros'),
+        (
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _ARMARIO = _DecorationItemType(
-        Substantive.make_male('armario'),
+        Substantive.make_male('armário'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _CRISTALEIRA = _DecorationItemType(
         Substantive.make_female('cristaleira'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,)
         )
 _ESPELHO = _DecorationItemType(
         Substantive.make_male('espelho'),
         (
-            _BASE_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,)
         )
 _QUADRO = _DecorationItemType(
         Substantive.make_male('quadro'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _WOODEN_DECORATION_FLAVOR,
-            _ART_DECORATION_FLAVOR,
-            _ART_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,)
         )
 _TAPETE = _DecorationItemType(
         Substantive.make_male('tapete'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _USEBLAE_DECORATION_FLAVOR,
-            _FABRIC_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _USEBLAE_ITEM_FLAVOR,
+            _FABRIC_ITEM_FLAVOR,)
         )
 _BUSTO = _DecorationItemType(
         Substantive.make_male('busto'),
         (
-            _BASE_DECORATION_FLAVOR,
-            _ART_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,)
         )
 _LUSTRE = _DecorationItemType(
         Substantive.make_male('lustre'),
         (
-            _BASE_DECORATION_FLAVOR,)
+            _BASE_ITEM_FLAVOR,)
         )
 
 
@@ -563,7 +714,7 @@ _SALA = _PlaceType(
             (_LAREIRA,),
             (None, _POLTRONA,),
             (None, _MESA_DE_CENTRO,),
-            (None, _CRISTALEIRA, _ESTANTE, _ARMARIO,),
+            (None, _CRISTALEIRA, _ESTANTE, _ESTANTE_DE_LIVROS, _ARMARIO,),
             (None, _QUADRO,),
             (None, _TAPETE,),
             (None, None, _BUSTO,),
@@ -586,7 +737,7 @@ _SALA_DE_ESTAR = _PlaceType(
             (_POLTRONA,),
             (_SOFA,),
             (_MESA_DE_CENTRO,),
-            (None, _CRISTALEIRA, _ARMARIO, _ESTANTE,),
+            (None, _CRISTALEIRA, _ARMARIO, _ESTANTE, _ESTANTE_DE_LIVROS,),
             (None, None, _LUSTRE, _LAREIRA, _LAREIRA,),
             (None, _BUSTO, _QUADRO, _BUSTO, _QUADRO,),
             (None, None, None, _TAPETE,),
@@ -599,7 +750,7 @@ _SALA_DE_LEITURA = _PlaceType(
             (_POLTRONA,),
             (None, _SOFA,),
             (None, _MESA_DE_CENTRO,),
-            (None, _ARMARIO, _ESTANTE, _ESTANTE,),
+            (None, _ARMARIO, _ESTANTE, _ESTANTE_DE_LIVROS,),
             (None, _QUADRO, _QUADRO,),
             (None, _BUSTO, _BUSTO,),
             (None, None, _TAPETE,),
@@ -612,7 +763,7 @@ _BIBLIOTECA = _PlaceType(
             (_POLTRONA,),
             (_LAREIRA,),
             (_MESA_DE_CENTRO,),
-            (_ESTANTE,),
+            (_ESTANTE_DE_LIVROS,),
             (None, _SOFA,),
             (None, _ARMARIO,),
             (None, _CADEIRA,),
@@ -662,7 +813,7 @@ _QUARTO_DE_EMPREGADOS = _PlaceType(
             (None, _CADEIRA,),
             (None, _ARMARIO, _ESTANTE,),
             ),
-        dead_end = True)
+        )
 _QUARTO = _PlaceType(
         Substantive.make_male('quarto'),
         (
@@ -685,16 +836,14 @@ _CLOSET = _PlaceType(
             (_ARMARIO,),
             (_ESPELHO,)
             ),
-        repeat = True,
-        dead_end = True)
+        repeat = True)
 _DEPOSITO = _PlaceType(
         Substantive.make_male('Depósito'),
         (
             (None, _ESTANTE,),
             (None, _ARMARIO,)
             ),
-        repeat = True,
-        dead_end = True)
+        repeat = True)
 _SOTAO = _PlaceType(
         Substantive.make_male('sótão'),
         (
@@ -710,8 +859,7 @@ _SOTAO = _PlaceType(
             (None, _QUADRO,),
             (None, _TAPETE,),
             (None, _CRISTALEIRA,)
-            ),
-        dead_end = True)
+            ))
 _PORAO = _PlaceType(
         Substantive.make_male('Porão'),
         (
@@ -727,8 +875,7 @@ _PORAO = _PlaceType(
             (None, _QUADRO,),
             (None, _TAPETE,),
             (None, _CRISTALEIRA,)
-            ),
-        dead_end = True)
+            ))
 _ATELIE = _PlaceType(
         Substantive.make_male('atelie'),
         (
@@ -765,7 +912,20 @@ _MAP_TYPE = _MapType(
                 _SOTAO,
                 _PORAO,
                 _ATELIE
-            )
+                ),
+            (
+                _ESCADA,
+                _PASSAGEM,
+                _PASSAGEM_ADORNADA,
+                _PORTA,
+                _PORTA_DUPLA,
+                _PORTA_ADORNADA,
+                _PASSAGEM_SECRETA_LIVROS,
+                _PASSAGEM_SECRETA_QUADRO,
+                _PORTA_TIJOLADA,
+                _PORTA_TABOAS,
+                _PORTA_COM_CADEADO,
+                ),
         )
 
 
@@ -780,13 +940,14 @@ para esta silhueta #empty.norepeat(adjetivo_a)#. Este não é o local onde você
 queria estar.'''
 
 
-class Map(NamedTuple):
+class __MapBase(NamedTuple):
     context: 'Context'
     base_type: '_MapType'
     flavor: '_Flavor'
     name: str
     base_description: str
 
+class Map(__MapBase, GrammerMakebla):
     _LOCATION_NAMES_GENERATOR = location_names()
 
     @classmethod
@@ -806,14 +967,9 @@ class Map(NamedTuple):
                 name=name,
                 base_description=_MAP_BASE_DESCRIPTION)
 
-    def make_place(self):
-        place_type = choice(self.base_type.place_types) 
-        return Place.make(place_type, self.context)
-
-
     @property
     @lru_cache
-    def __raw_grammar(self):
+    def raw_grammar(self):
         return {
                 'empty': '',
                 'nome': self.name,
@@ -821,20 +977,14 @@ class Map(NamedTuple):
                 **self.base_type.raw('tipo', context=self.context)
                 }
 
-    @property
-    @lru_cache
-    def grammar(self):
-        g = Grammar(self.__raw_grammar)
-        g.add_modifiers(ContextualModifiers(g, self.context))
-        return g
-
 GrammerMakebla.register(Map)
 
 
-class DecorationItem(NamedTuple):
+class __DecorationItemBase(NamedTuple):
     decoration_type: '_DecorationItemType'
     context: 'Context'
 
+class DecorationItem(__DecorationItemBase, GrammerMakebla):
     @property
     @lru_cache
     def desc(self):
@@ -842,7 +992,7 @@ class DecorationItem(NamedTuple):
 
     @property
     @lru_cache
-    def __raw_grammar(self):
+    def raw_grammar(self):
         deco = self.decoration_type
         return {
                 'empty': '',
@@ -858,13 +1008,6 @@ class DecorationItem(NamedTuple):
     def base_description(self):
         return '#main#'
 
-    @property
-    @lru_cache
-    def grammar(self):
-        g = Grammar(self.__raw_grammar)
-        g.add_modifiers(ContextualModifiers(g, self.context))
-        return g
-
 GrammerMakebla.register(DecorationItem)
 
 
@@ -876,18 +1019,17 @@ _PLACE_BASE_DESCRIPTION = ['''
         '''[temp2:adjetivo_comp_#tipo_o#] #tipo_um# #tipo# #empty.norepeat(temp)# #empty.norepeat(temp2)#.''']
 
 
-class Place(NamedTuple):
+class __PlaceBase(NamedTuple):
     context: 'Context'
-    nome:str
     place_type: _PlaceType
     flavor_sec: _Flavor
     flavor_ter: _Flavor
-    decorations: typing.Tuple['DecorationItem']
+    decorations: Tuple['DecorationItem']
     base_description: str = '#desc##decorations#'
 
+class Place(GrammerMakebla, __PlaceBase):
     @classmethod
-    def make(cls, place_type, context):
-        nome = place_type.desc
+    def make(cls, place_type: _PlaceType, context: 'Context') -> 'Place':
         flavor_sec = choice(_PLACE_FLAVOR_LIST)
         flavor_ter = choice(_SECONDATY_PLACE_FLAVOR_LIST)
 
@@ -895,7 +1037,6 @@ class Place(NamedTuple):
 
         return cls(
                 context = context,
-                nome = nome,
                 place_type = place_type,
                 flavor_sec = flavor_sec,
                 flavor_ter = flavor_ter,
@@ -903,37 +1044,75 @@ class Place(NamedTuple):
                 )
 
     @property
-    def __raw_grammar(self):
+    @lru_cache
+    def nome(self) -> Substantive:
+        return self.place_type.desc
+
+    @property
+    def raw_grammar(self):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
 
-        decor_desc_tuple = tuple(describe(d) for d in self.decorations)
+        decor_desc_tuple = tuple(d.describe() for d in self.decorations)
+        listed_decoration = None
         if (len(decor_desc_tuple) > 1):
             decor_desc_tuple = tuple(sorted(decor_desc_tuple, key=len))
             listed_decoration = ', '.join(decor_desc_tuple[:-1]) + f' e {decor_desc_tuple[-1]}'
-        else:
+        elif decor_desc_tuple:
             listed_decoration = decor_desc_tuple[0]
 
-        _raw_grammar['decorations'] = ' onde você pode ver ' + listed_decoration
+        if (listed_decoration):
+            _raw_grammar['decorations'] = ' onde você pode ver ' + listed_decoration
+        else:
+            _raw_grammar['decorations'] = ''
+
         _raw_grammar.update(self.nome.raw('tipo'))
         _raw_grammar.update(self.flavor_sec.raw('adjetivo'))
         _raw_grammar.update(self.flavor_ter.raw('adjetivo_comp'))
         return _raw_grammar
 
+
+_PASSAGE_BASE_DESCRIPTION = '''
+[temp:adjetivo_#nome_o#]
+        #nome_um# #nome# #empty.norepeat(temp)#.
+'''
+
+
+class __PassageBase(NamedTuple):
+    context: 'Context'
+    nome: Substantive
+    passage_type: _PassageType
+    flavor: _Flavor
+    base_description: str = '#desc#'
+
+
+class Passage(GrammerMakebla, __PassageBase):
+    pass
+
     @property
     @lru_cache
-    def grammar(self):
-        g = Grammar(self.__raw_grammar)
-        g.add_modifiers(ContextualModifiers(g, self.context))
-        return g
+    def b_side(self) -> Substantive:
+        self.passage_type.b_side
 
+    @classmethod
+    def make(cls, passage_type: _PassageType, context: 'Context') -> Tuple['Passage', 'Passage']:
+        flavor = choice(passage_type.flavor_list)
+        return (cls(context = context, nome = passage_type.a_side, flavor = flavor, passage_type = passage_type,),
+                cls(context = context, nome = passage_type.b_side, flavor = flavor, passage_type = passage_type,))
 
-GrammerMakebla.register(Map)
+    @property
+    def raw_grammar(self):
+        _raw_grammar = {'empty': ''}
+        _raw_grammar['desc'] = _PASSAGE_BASE_DESCRIPTION
+        _raw_grammar.update(self.nome.raw('nome'))
+        _raw_grammar.update(self.flavor.raw('adjetivo'))
+        return _raw_grammar
 
 
 class Context():
     def __init__(self):
         self.map = Map.make(self)
+        self.place_set: Set['Place'] = set()
         self._norepeat_said = set()
         self._norepeat_map = list()
 
@@ -948,12 +1127,11 @@ class Context():
     def _update_norepeat_said(self, text):
         for group in self._norepeat_map:
             if text in group:
-                self._norepeat_said |= group
+                self._norepeat_said |= group;
                 break
         else:
             self._norepeat_map.append({text})
             self._norepeat_said |= {text}
-
 
     def _register_norepeat_map(self, options):
         for group in self._norepeat_map:
@@ -969,3 +1147,24 @@ class Context():
             return
         self._norepeat_said -= option_set
 
+    @property
+    def map_type(self) -> _MapType:
+        return self.map.base_type
+
+    def __choose_place_type(self) -> '_PlaceType':
+        used_place_type_set = {p.place_type for p in self.place_set}
+        can_repeat_func = lambda t: t.repeat or not t in used_place_type_set
+        possible_place_type_tuple = tuple(filter(can_repeat_func, self.map_type.place_types))
+        place_type = choice(possible_place_type_tuple) 
+        return place_type
+
+    def make_place(self) -> Place:
+        place_type = self.__choose_place_type()
+        place = Place.make(place_type, self)
+
+        self.place_set.add(place)
+        return place
+    
+    def make_passage(self) -> Tuple['Passage', 'Passage']:
+        passage_type = choice(self.map_type.passage_types)
+        return Passage.make(passage_type, self)

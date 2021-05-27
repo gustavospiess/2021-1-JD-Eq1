@@ -1,4 +1,5 @@
 from .. import text_generators
+from collections import Counter
 
 
 def test_monster_names():
@@ -88,7 +89,7 @@ def test_context_object():
     for _ in range(10):
         context = text_generators.Context()
         assert context.map is not None
-        g = text_generators.make_grammar(context.map)
+        g = context.map.grammar
         assert g.flatten('#adjetivo#')
         assert g.flatten('#nome#')
         assert g.flatten('#tipo#')
@@ -97,17 +98,42 @@ def test_context_object():
 def test_map_generation():
     for _ in range(10):
         context = text_generators.Context()
-        desc = text_generators.describe(context.map)
+        desc = context.map.describe
         assert desc
 
 
 def test_place_generation():
     context = text_generators.Context()
-    for _ in range(20):
-        place = context.map.make_place()
-        desc = text_generators.describe(place)
+    for _ in range(50):
+        place = context.make_place()
+        desc = place.describe()
         assert desc
         if len(place.decorations) > 1:
             assert ' e ' in desc
             for deco in place.decorations:
                 assert deco.desc.word in desc
+
+
+def test_place_generation_no_repeat():
+    context = text_generators.Context()
+    type_counter = Counter()
+    for _ in range(50):
+        place = context.make_place()
+        type_counter[place.place_type] += 1
+
+    for place_type, qtd in type_counter.items():
+        assert place_type.repeat or qtd == 1
+
+    
+def test_passage_generation():
+    context = text_generators.Context()
+    for _ in range(50):
+        passage_a, passage_b = context.make_passage()
+        desc = passage_a.describe()
+        assert desc
+        print(desc)
+        desc = passage_b.describe()
+        assert desc
+        print(desc)
+        print()
+    assert 0
