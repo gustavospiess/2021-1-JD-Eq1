@@ -26,7 +26,7 @@ def test_contextual_norepeat():
         'b': 'lorem',
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g, text_generators.Context())
+    mod = text_generators.Context().make_modifires(g)
     g.add_modifiers(mod)
     for i in range(50):
         assert len({g.flatten('#empty.norepeat(a)#') for _ in range(49)}) == 49
@@ -41,7 +41,7 @@ def test_contextual_norepeat_sparce():
         'b': ['a', 'b'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g, text_generators.Context())
+    mod = text_generators.Context().make_modifires(g)
     g.add_modifiers(mod)
     for i in range(50):
         g.flatten('#empty.norepeat(a)#')
@@ -53,7 +53,7 @@ def test_contextual_norepeat_sparce():
         'b': ['a'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g, text_generators.Context())
+    mod = text_generators.Context().make_modifires(g)
     g.add_modifiers(mod)
     for i in range(50):
         g.flatten('#empty.norepeat(a)#')
@@ -67,7 +67,7 @@ def test_contextual_norepeat_inirect():
         'b': ['lorem'],
         'empty': ''
         })
-    mod = text_generators.ContextualModifiers(g, text_generators.Context())
+    mod = text_generators.Context().make_modifires(g)
     g.add_modifiers(mod)
     assert g.flatten('#empty.norepeat(a)#') == 'lorem'
 
@@ -80,7 +80,7 @@ def test_contextual_gender():
         'bonito_a': 'bonita',
         'bonito_o': 'bonito',
         })
-    mod = text_generators.ContextualModifiers(g, text_generators.Context())
+    mod = text_generators.Context().make_modifires(g)
     g.add_modifiers(mod)
     assert g.flatten('#female.gender(bonito)#') == 'bonita'
     assert g.flatten('#male.gender(bonito)#') == 'bonito'
@@ -131,9 +131,16 @@ def test_passage_generation():
         passage_a, passage_b = context.make_passage()
         desc = passage_a.describe()
         assert desc
-        print(desc)
         desc = passage_b.describe()
         assert desc
-        print(desc)
+
+
+def test_passage_distribution():
+    builder = text_generators.MapBuilder()
+    builder.create_passage(0, 1, False)
+    builder.create_ambient(0)
+    builder.create_ambient(1)
+    for place in builder.ambient_list:
+        print(place.describe())
         print()
     assert 0

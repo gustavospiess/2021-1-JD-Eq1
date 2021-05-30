@@ -2,7 +2,9 @@ from tracery import Grammar
 from random import choice, sample, randint
 from functools import partial, lru_cache
 from abc import ABC, abstractproperty
-from typing import NamedTuple, Mapping, Union, Dict, List, Callable, Any, Tuple, Optional, Set
+from typing import NamedTuple, Mapping, Union, Dict, List, Callable, Any, Tuple
+from typing import Optional, Set, Iterable
+import itertools
 
 
 class GrammerMakebla(ABC):
@@ -24,7 +26,7 @@ class GrammerMakebla(ABC):
     @lru_cache
     def grammar(self) -> Grammar:
         g = Grammar(self.raw_grammar)
-        g.add_modifiers(ContextualModifiers(g, self.context))
+        g.add_modifiers(self.context.make_modifires(g))
         return g
 
     def describe(self) -> str:
@@ -101,46 +103,6 @@ def location_names() -> str:
     g = Grammar(_LOCATION_NAMES)
     while True:
         yield g.flatten('#main#')
-
-class ContextualModifiers(Mapping['str', Callable[[str, Any], str]]):
-
-    def __init__(self, grammar, context=None):
-        self.grammar = grammar
-        self.context = context
-        self.__mapping = {
-            'norepeat': partial(self.norepeat),
-            'gender': partial(self.gender)
-        }
-
-    def gender(self, gender, text) -> str: 
-        return self.grammar.flatten(f'#{text}_{gender}#')
-
-    def norepeat(self, text=None, group=None) -> str:
-        symbols = self.grammar.symbols
-
-        if group not in symbols or not isinstance(symbols[group].raw_rules, list):
-            return text
-        
-        options = symbols[group].raw_rules
-        if len(options) == 1 and options[0] in symbols and options[0] != group: 
-            # Sometimes the text to be not repeated is nested to treat gender
-            # I know it is not pretty nut I am neither and I'm not complaining
-            return self.norepeat(text, options[0])
-        return self.context.norepeat(options)
-
-
-    def reset_norepeat(self) -> None:
-        self.context._reset_norepeat_said()
-
-    def __getitem__(self, key) -> Callable[[str, Any], str]:
-        return self.__mapping[key]
-
-    def __iter__(self):
-        return iter(self.__mapping)
-
-    def __len__(self):
-        return len(self.__mapping)
-
 
 class Substantive(NamedTuple):
     word: str
@@ -1025,11 +987,12 @@ class __PlaceBase(NamedTuple):
     flavor_sec: _Flavor
     flavor_ter: _Flavor
     decorations: Tuple['DecorationItem']
+    passages: Tuple['Passage']
     base_description: str = '#desc##decorations#'
 
 class Place(GrammerMakebla, __PlaceBase):
     @classmethod
-    def make(cls, place_type: _PlaceType, context: 'Context') -> 'Place':
+    def make(cls, place_type: _PlaceType, context: 'Context', passages) -> 'Place':
         flavor_sec = choice(_PLACE_FLAVOR_LIST)
         flavor_ter = choice(_SECONDATY_PLACE_FLAVOR_LIST)
 
@@ -1040,7 +1003,8 @@ class Place(GrammerMakebla, __PlaceBase):
                 place_type = place_type,
                 flavor_sec = flavor_sec,
                 flavor_ter = flavor_ter,
-                decorations = decorations
+                decorations = decorations,
+                passages = passages
                 )
 
     @property
@@ -1053,7 +1017,7 @@ class Place(GrammerMakebla, __PlaceBase):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
 
-        decor_desc_tuple = tuple(d.describe() for d in self.decorations)
+        decor_desc_tuple = tuple(d.describe() for d in itertools.chain(self.decorations, self.passages))
         listed_decoration = None
         if (len(decor_desc_tuple) > 1):
             decor_desc_tuple = tuple(sorted(decor_desc_tuple, key=len))
@@ -1087,7 +1051,6 @@ class __PassageBase(NamedTuple):
 
 
 class Passage(GrammerMakebla, __PassageBase):
-    pass
 
     @property
     @lru_cache
@@ -1110,11 +1073,54 @@ class Passage(GrammerMakebla, __PassageBase):
 
 
 class Context():
+    class ContextualModifiers(Mapping['str', Callable[[str, Any], str]]):
+
+        def __init__(self, grammar, context):
+            self.grammar = grammar
+            self.context = context
+            self.__mapping = {
+                'norepeat': partial(self.norepeat),
+                'gender': partial(self.gender)
+            }
+
+        def gender(self, gender, text) -> str: 
+            return self.grammar.flatten(f'#{text}_{gender}#')
+
+        def norepeat(self, text=None, group=None) -> str:
+            symbols = self.grammar.symbols
+
+            if group not in symbols or not isinstance(symbols[group].raw_rules, list):
+                return text
+            
+            options = symbols[group].raw_rules
+            if len(options) == 1 and options[0] in symbols and options[0] != group: 
+                # Sometimes the text to be not repeated is nested to treat gender
+                # I know it is not pretty but I am neither and I'm not complaining
+                return self.norepeat(text, options[0])
+            return self.context.norepeat(options)
+
+
+        def reset_norepeat(self) -> None:
+            self.context._reset_norepeat_said()
+
+        def __getitem__(self, key) -> Callable[[str, Any], str]:
+            return self.__mapping[key]
+
+        def __iter__(self):
+            return iter(self.__mapping)
+
+        def __len__(self):
+            return len(self.__mapping)
+
+
     def __init__(self):
         self.map = Map.make(self)
-        self.place_set: Set['Place'] = set()
+        self.place_type_set: Set['_PlaceType'] = set()
         self._norepeat_said = set()
         self._norepeat_map = list()
+
+    def make_modifires(self, grammar: Grammar):
+        return self.ContextualModifiers(grammar, self)
 
     def norepeat(self, options):
         option_set = set(options)
@@ -1152,19 +1158,41 @@ class Context():
         return self.map.base_type
 
     def __choose_place_type(self) -> '_PlaceType':
-        used_place_type_set = {p.place_type for p in self.place_set}
-        can_repeat_func = lambda t: t.repeat or not t in used_place_type_set
+        can_repeat_func = lambda t: t.repeat or not t in self.place_type_set
         possible_place_type_tuple = tuple(filter(can_repeat_func, self.map_type.place_types))
         place_type = choice(possible_place_type_tuple) 
         return place_type
 
-    def make_place(self) -> Place:
+    def make_place(self, passages=tuple()) -> Place:
         place_type = self.__choose_place_type()
-        place = Place.make(place_type, self)
+        place = Place.make(place_type, self, passages)
 
-        self.place_set.add(place)
+        self.place_type_set.add(place.place_type)
         return place
     
-    def make_passage(self) -> Tuple['Passage', 'Passage']:
-        passage_type = choice(self.map_type.passage_types)
+    def make_passage(self, locked = False) -> Tuple['Passage', 'Passage']:
+
+        types_available: Iterable[_PassageType] = self.map_type.passage_types
+        if (locked):
+            types_available = tuple(t for t in types_available if t.lockable)
+        else:
+            types_available = tuple(t for t in types_available if not t.exclusive_lockable)
+
+        passage_type = choice(types_available)
         return Passage.make(passage_type, self)
+
+
+class MapBuilder():
+    def __init__(self):
+        self.context = Context()
+        self.passage_map = dict()
+        self.ambient_list = list()
+
+    def create_passage(self, _from, _to, locked):
+        self.passage_map[(_from, _to)] = self.context.make_passage(locked)
+
+    def create_ambient(self, _id):
+        passage_ids = (key for key in self.passage_map if _id in key)
+        passages = tuple(self.passage_map[key][key.index(_id)] for key in passage_ids)
+        ambient = self.context.make_place(passages)
+        self.ambient_list.append(ambient)
