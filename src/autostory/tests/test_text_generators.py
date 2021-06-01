@@ -1,5 +1,6 @@
 from .. import text_generators
 from collections import Counter
+from pprint import pp
 
 
 def test_monster_names():
@@ -141,6 +142,28 @@ def test_passage_distribution():
     builder.create_ambient(0)
     builder.create_ambient(1)
     for place in builder.ambient_list:
-        print(place.describe())
-        print()
+        assert place.passages[0].nome.word in place.describe()
+        assert place.passages[0].locked == False
+    builder = text_generators.MapBuilder()
+    builder.create_passage(0, 1, True)
+    builder.create_ambient(0)
+    builder.create_ambient(1)
+    for place in builder.ambient_list:
+        assert place.passages[0].nome.word in place.describe()
+        assert place.passages[0].locked == True
+
+
+def test_passage_distribution():
+    builder = text_generators.MapBuilder()
+    builder.create_passage(0, 1, False)
+    builder.create_passage(1, 2, False)
+    builder.create_passage(2, 3, False)
+    builder.create_ambient(0)
+    builder.create_ambient(1)
+    builder.create_ambient(2)
+    builder.create_ambient(3)
+    b = builder.build()
+    print(b.as_json())
+    pp(b.as_dict())
+
     assert 0

@@ -1,47 +1,40 @@
-class Action():
-    pass
+from typing import NamedTuple
+from typing import Mapping, Tuple
+
+import json
 
 
-class Object():
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
-
-    def look(self):
-        return Action()
-
-    def open(self):
-       return Action()
-    
-    def use(self):
-        return Action()
+class Decoration(NamedTuple):
+    descritption: str
 
 
-class Item(Object):
-    def take(self):
-        return Action()
-
-    def put(self):
-        return Action()
+class Passage(NamedTuple):
+    destination: int
+    descritption: str
 
 
-class Passage(Object):
-    def __init__(self, _from, to, name, description):
-        self._from = _from
-        self.to = to
-        super().__init__(name, description)
-
-    def go(self):
-        return Action()
+class Ambient(NamedTuple):
+    id: int
+    descritption: str
+    passages: Tuple[Passage, ...]
+    decorations: Tuple[Decoration, ...]
 
 
-class Ambient():
-    def __init__(self, objects):
-        self.objects = objects
+class Map(NamedTuple):
+    introducion_letter: str
+    name: str
+    descritption: str
+    ambients: Tuple[Ambient, ...]
+    passages: Tuple[Tuple[Passage, Passage], ...]
 
+    def as_dict(self):
+        return {
+                    'introducion_letter': self.introducion_letter,
+                    'name': self.name,
+                    'descritption': self.descritption,
+                    'ambients': tuple(a._asdict() for a in self.ambients),
+                    'passages': tuple((p1._asdict(), p2._asdict(),) for p1, p2 in self.passages)
+                }
 
-class Game():
-    def __init__(self, ambients, passages):
-        self.ambients = ambients
-        self.passages = passages
-        
+    def as_json(self):
+        return json.dumps(self.as_dict(), ensure_ascii=False, indent=2)

@@ -1,10 +1,16 @@
 from tracery import Grammar
+
 from random import choice, sample, randint
-from functools import partial, lru_cache
 from abc import ABC, abstractproperty
+
 from typing import NamedTuple, Mapping, Union, Dict, List, Callable, Any, Tuple
 from typing import Optional, Set, Iterable
-import itertools
+
+from functools import partial, lru_cache
+from itertools import chain
+from collections import defaultdict
+
+from .. import datamodels
 
 
 class GrammerMakebla(ABC):
@@ -29,6 +35,7 @@ class GrammerMakebla(ABC):
         g.add_modifiers(self.context.make_modifires(g))
         return g
 
+    
     def describe(self) -> str:
         desc = self.grammar.flatten(self.base_description)
         return desc.replace('\n', ' ').replace('  ', ' ').replace(' .', '.').strip()
@@ -414,8 +421,6 @@ _ESCADA = _PassageType.make_unsided(
             ),
         lockable=False
         )
-
-
 _PASSAGEM = _PassageType.make_unsided(
         desc = Substantive.make_female('passagem'),
         flavor_list = (
@@ -424,8 +429,6 @@ _PASSAGEM = _PassageType.make_unsided(
             ),
         lockable=False
         )
-
-
 _PASSAGEM_ADORNADA = _PassageType.make_unsided(
         desc = Substantive.make_female('passagem adornada'),
         flavor_list = (
@@ -435,8 +438,6 @@ _PASSAGEM_ADORNADA = _PassageType.make_unsided(
             ),
         lockable=False
         )
-
-
 _PORTA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta'),
         flavor_list = (
@@ -446,8 +447,6 @@ _PORTA = _PassageType.make_unsided(
             ),
         lockable=True
         )
-
-
 _PORTA_DUPLA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta dupla'),
         flavor_list = (
@@ -457,8 +456,6 @@ _PORTA_DUPLA = _PassageType.make_unsided(
             ),
         lockable=True
         )
-
-
 _PORTA_ADORNADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta adornada'),
         flavor_list = (
@@ -468,8 +465,6 @@ _PORTA_ADORNADA = _PassageType.make_unsided(
             ),
         lockable=True
         )
-
-
 _PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
         desc = Substantive.make_female('estante de livros'),
         flavor_list = (
@@ -479,8 +474,6 @@ _PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
         lockable=True,
         exclusive_lockable=True
         )
-
-
 _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
         desc = Substantive.make_male('quadro'),
         flavor_list = (
@@ -491,8 +484,6 @@ _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
         lockable=True,
         exclusive_lockable=True
         )
-
-
 _PORTA_TIJOLADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tijolos'),
         flavor_list = (
@@ -501,8 +492,6 @@ _PORTA_TIJOLADA = _PassageType.make_unsided(
         lockable=True,
         exclusive_lockable=True
         )
-
-
 _PORTA_TABOAS = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tábuas'),
         flavor_list = (
@@ -511,8 +500,6 @@ _PORTA_TABOAS = _PassageType.make_unsided(
         lockable=True,
         exclusive_lockable=True
         )
-
-
 _PORTA_COM_CADEADO = _PassageType.make_unsided(
         desc = Substantive.make_female('porta com um cadeado'),
         flavor_list = (
@@ -1017,7 +1004,7 @@ class Place(GrammerMakebla, __PlaceBase):
         _raw_grammar = {'empty': ''}
         _raw_grammar['desc'] = _PLACE_BASE_DESCRIPTION
 
-        decor_desc_tuple = tuple(d.describe() for d in itertools.chain(self.decorations, self.passages))
+        decor_desc_tuple = tuple(d.describe() for d in chain(self.decorations, self.passages))
         listed_decoration = None
         if (len(decor_desc_tuple) > 1):
             decor_desc_tuple = tuple(sorted(decor_desc_tuple, key=len))
@@ -1038,7 +1025,7 @@ class Place(GrammerMakebla, __PlaceBase):
 
 _PASSAGE_BASE_DESCRIPTION = '''
 [temp:adjetivo_#nome_o#]
-        #nome_um# #nome# #empty.norepeat(temp)#.
+        #nome_um# #nome# #empty.norepeat(temp)#
 '''
 
 
@@ -1051,11 +1038,6 @@ class __PassageBase(NamedTuple):
 
 
 class Passage(GrammerMakebla, __PassageBase):
-
-    @property
-    @lru_cache
-    def b_side(self) -> Substantive:
-        self.passage_type.b_side
 
     @classmethod
     def make(cls, passage_type: _PassageType, context: 'Context') -> Tuple['Passage', 'Passage']:
@@ -1183,16 +1165,67 @@ class Context():
 
 
 class MapBuilder():
+
+    class __PassageMap(defaultdict):
+        def __init__(self, *args, **kwargs):
+            super().__init__(dict, *args, **kwargs)
+
+        def iter_pairs(self):
+            for _from, sub_dict in self.items():
+                for _to, instace in sub_dict.items():
+                    if _from > _to:
+                        yield ((_to, instace,), (_from, self[_to][_from],))
+
     def __init__(self):
         self.context = Context()
-        self.passage_map = dict()
-        self.ambient_list = list()
+        self.passage_map = self.__PassageMap()
+        self.ambient_map = dict()
+
+    @property
+    def ambient_list(self):
+        return list(self.ambient_map.values())
 
     def create_passage(self, _from, _to, locked):
-        self.passage_map[(_from, _to)] = self.context.make_passage(locked)
+        a_side, b_side = self.context.make_passage(locked)
+        self.passage_map[_from][_to] = a_side
+        self.passage_map[_to][_from] = b_side
 
     def create_ambient(self, _id):
-        passage_ids = (key for key in self.passage_map if _id in key)
-        passages = tuple(self.passage_map[key][key.index(_id)] for key in passage_ids)
+        passages = tuple(self.passage_map[_id].values())
         ambient = self.context.make_place(passages)
-        self.ambient_list.append(ambient)
+        self.ambient_map[_id] = ambient
+
+    def build(self) -> datamodels.Map:
+        passage_list = list()
+        for (f_id, f_inst), (t_id, t_inst) in self.passage_map.iter_pairs():
+            passage_pair = (
+                    datamodels.Passage(f_id, f_inst.describe()),
+                    datamodels.Passage(t_id, t_inst.describe()))
+            passage_list.append(passage_pair)
+
+        ambient_list = list()
+        for _id, _inst in self.ambient_map.items():
+            decoration_list = list()
+            for deco in _inst.decorations:
+                decoration_list.append(deco.describe())
+
+            sub_passage_list = list()
+            for passage in _inst.passages:
+                sub_passage_list.append(passage.describe())
+
+            ambient = datamodels.Ambient(
+                    id=_id,
+                    descritption = _inst.describe(),
+                    passages = tuple(sub_passage_list),
+                    decorations = tuple(decoration_list),
+                    )
+            ambient_list.append(ambient)
+        
+        return datamodels.Map(
+                    introducion_letter = next(intro_letter()),
+                    name = self.context.map.name,
+                    descritption = self.context.map.describe(),
+                    ambients = tuple(ambient_list),
+                    passages = tuple(passage_list),
+                )
+
