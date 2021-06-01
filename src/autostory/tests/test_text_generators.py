@@ -166,4 +166,4 @@ def test_passage_distribution():
     print(b.as_json())
     pp(b.as_dict())
 
-    assert 0
+    # assert 0
