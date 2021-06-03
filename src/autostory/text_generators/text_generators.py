@@ -61,7 +61,14 @@ def location_names() -> str:
 
 RAW_GRAMMAR_TYPE = Dict[str, Union[str, List[str]]]
 
+@dataclass_abc
 class GrammerMakebla(ABC):
+    __frozen: bool = field(init=False, default=False)
+
+    def freeze(self):
+        self.__frozen = True
+        descritption = self.describe()
+        self.describe = lambda: descritption
 
     @abstractproperty
     def context(self) -> 'Context':
@@ -220,6 +227,7 @@ class Passage(GrammerMakebla):
     nome: Substantive
     passage_type: _PassageType
     flavor: _Flavor
+    #TODO add key
 
     @property
     def base_description(self) -> str:
@@ -342,9 +350,9 @@ class Context():
 
         types_available: Iterable[_PassageType] = self.map_type.passage_types
         if (locked):
-            types_available = tuple(t for t in types_available if t.lockable)
+            types_available = tuple(t for t in types_available if t.key)
         else:
-            types_available = tuple(t for t in types_available if not t.exclusive_lockable)
+            types_available = tuple(t for t in types_available if not t.key)
 
         passage_type = choice(types_available)
         return Passage.make(passage_type, self)
@@ -382,6 +390,14 @@ class MapBuilder():
         self.ambient_map[_id] = ambient
 
     def build(self) -> datamodels.Map:
+
+        for (f_id, f_inst), (t_id, t_inst) in self.passage_map.iter_pairs():
+            f_inst.freeze()
+            t_inst.freeze()
+
+        for ambient in self.ambient_map.values():
+            ambient.freeze()
+
         passage_list = list()
         for (f_id, f_inst), (t_id, t_inst) in self.passage_map.iter_pairs():
             passage_pair = (

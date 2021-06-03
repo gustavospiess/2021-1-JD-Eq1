@@ -1,11 +1,11 @@
-from .. import map_generator
+from .. import map_generators
 import collections
 
 
 def test_raw_generation():
-    _map = map_generator.raw(8, 5)
-    assert isinstance(_map, map_generator.Raw)
-    assert _map.vertexes.issuperset({map_generator.Vertex(i, 0) for i in range(8)})
+    _map = map_generators.raw(8, 5)
+    assert isinstance(_map, map_generators.Raw)
+    assert _map.vertexes.issuperset({map_generators.Vertex(i, 0) for i in range(8)})
     # contains at_least 8 areas numbered 0 to 7
 
     reached = {_map.final}
@@ -37,9 +37,9 @@ def test_raw_generation():
     assert len(_map.vertexes) >= 1.2*8
     # assert that there are up to size_factor * size * 2 rooms
 
-    assert len(map_generator.raw(0, 1).vertexes) >= 4 #assert minum size
-    assert len(map_generator.raw().vertexes) >= 4
-    assert len(map_generator.raw(size_factor=0).vertexes) >= 4
+    assert len(map_generators.raw(0, 1).vertexes) >= 4 #assert minum size
+    assert len(map_generators.raw().vertexes) >= 4
+    assert len(map_generators.raw(size_factor=0).vertexes) >= 4
 
 
     assert len(tuple(k for k in _map.keys if k[0] in k[1])) <= 2
@@ -49,7 +49,7 @@ def test_raw_generation():
 def test_key_shuffle():
     count = 0
     for i in range(100):
-        _map = map_generator.raw(8, 5)
+        _map = map_generators.raw(8, 5)
         count += len(tuple(k for k in _map.keys if k[0] in k[1]))
         assert any(k.position == (7, 0) for k in _map.keys if k[0] in k[1])
         # assert that the first room always has its key and its door

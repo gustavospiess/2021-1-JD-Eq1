@@ -8,6 +8,8 @@ from typing import (
 
 from functools import lru_cache
 
+from .. import datamodels
+
 from .native_values import (
         _INTRO_LETTER,
         _LOCATION_NAMES,
@@ -164,20 +166,26 @@ class _ItemType(NamedTuple):
     flavor_list: Tuple['_Flavor']
 
 
+class _KeyType(NamedTuple):
+    desc: 'Substantive'
+    flavor_list: Tuple['_Flavor']
+
+
 class _PassageType(NamedTuple):
     a_side: 'Substantive'
     b_side: 'Substantive'
     flavor_list: Tuple['_Flavor']
-    lockable: bool = False
-    exclusive_lockable: bool = False
+    key: _KeyType = None
 
     @classmethod
-    def make_unsided(cls,
-            desc: 'Substantive',
-            flavor_list: Tuple['_Flavor'],
-            lockable: bool = False,
-            exclusive_lockable: bool = False):
-        return cls(desc, desc, flavor_list, lockable, exclusive_lockable)
+    def make_unsided(cls, desc: 'Substantive', *args, **kwargs):
+
+        return cls(
+                a_side = desc,
+                b_side = desc,
+                *args,
+                **kwargs
+                )
 
 
 class _DecorationItemType(_ItemType):
@@ -207,8 +215,6 @@ _BASE_ITEM_FLAVOR = _Flavor((
         Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} limp{g[2]} a muito tempo',
             m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
     ))
-
-
 _WOODEN_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de madeira', same=True),
         Adjective.make_agender('de madeira podre', same=True),
@@ -220,8 +226,17 @@ _WOODEN_ITEM_FLAVOR = _Flavor((
         Adjective.make('lascad'),
         Adjective.make_agender('frágil', 'frágeis'),
     ))
-
-
+_METAL_ITEM_FLAVOR = _Flavor((
+        Adjective.make_agender('de metal', same=True),
+        Adjective.make_agender('de ferro', same=True),
+        Adjective.make_format(lambda g: f'enferrujad{g}'),
+        Adjective.make_format(lambda g: f'cobert{g} de ferrugem'),
+        Adjective.make_format(lambda g: f'feit{g} metal'),
+        Adjective.make_format(lambda g: f' que é feit{g} de metal'),
+        Adjective.make_agender('brilhante', same=True),
+        Adjective.make_agender('frágil', 'frágeis'),
+        Adjective.make_agender('resistente'),
+    ))
 _FABRIC_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de tecido', same=True),
         Adjective.make_format(lambda g: f'feit{g} de tecido'),
@@ -233,8 +248,6 @@ _FABRIC_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('com furos', same=True),
         Adjective.make('mofad'),
     ))
-
-
 _USEBLAE_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('com marcas de uso', same=True),
         Adjective.make_agender('com muitas marcas de uso', same=True),
@@ -249,8 +262,6 @@ _USEBLAE_ITEM_FLAVOR = _Flavor((
         Adjective.make_format(lambda g: f'replet{g} de marcas de uso'),
         Adjective.make_agender(f'que ninguém usa a muito tempo', same=True),
     ))
-
-
 _ART_ITEM_FLAVOR = _Flavor((
         Adjective.make_agender('de péssimo gosto', same=True),
         Adjective.make('macabr'),
@@ -271,6 +282,20 @@ _ART_ITEM_FLAVOR = _Flavor((
 ################################################################################
 
 
+_CHAVE_BASICA = _KeyType(
+        desc = Substantive.make_female('chave'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR
+            ),
+        )
+
+
+################################################################################
+
+
 _ESCADA = _PassageType.make_unsided(
         desc = Substantive.make_female('escada'),
         flavor_list = (
@@ -278,7 +303,6 @@ _ESCADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR,
             ),
-        lockable=False
         )
 _PASSAGEM = _PassageType.make_unsided(
         desc = Substantive.make_female('passagem'),
@@ -286,7 +310,6 @@ _PASSAGEM = _PassageType.make_unsided(
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
             ),
-        lockable=False
         )
 _PASSAGEM_ADORNADA = _PassageType.make_unsided(
         desc = Substantive.make_female('passagem adornada'),
@@ -295,7 +318,6 @@ _PASSAGEM_ADORNADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _ART_ITEM_FLAVOR,
             ),
-        lockable=False
         )
 _PORTA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta'),
@@ -304,7 +326,15 @@ _PORTA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR
             ),
-        lockable=True
+        )
+_PORTA_TRANCADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta trancada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR
+            ),
+        key=_CHAVE_BASICA
         )
 _PORTA_DUPLA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta dupla'),
@@ -313,7 +343,15 @@ _PORTA_DUPLA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR
             ),
-        lockable=True
+        )
+_PORTA_DUPLA_TRANCADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta dupla trancada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR
+            ),
+        key=_CHAVE_BASICA
         )
 _PORTA_ADORNADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta adornada'),
@@ -322,16 +360,24 @@ _PORTA_ADORNADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _ART_ITEM_FLAVOR
             ),
-        lockable=True
+        )
+_PORTA_ADORNADA_TRANCADA = _PassageType.make_unsided(
+        desc = Substantive.make_female('porta adornada e trancada'),
+        flavor_list = (
+            _USEBLAE_ITEM_FLAVOR,
+            _BASE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR
+            ),
+        key=_CHAVE_BASICA
         )
 _PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
         desc = Substantive.make_female('estante de livros'),
         flavor_list = (
             _BASE_ITEM_FLAVOR,
             _USEBLAE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR,),
-        lockable=True,
-        exclusive_lockable=True
+            _WOODEN_ITEM_FLAVOR,
+            ),
+        key=_CHAVE_BASICA #TODO
         )
 _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
         desc = Substantive.make_male('quadro'),
@@ -339,34 +385,23 @@ _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
             _BASE_ITEM_FLAVOR,
             _USEBLAE_ITEM_FLAVOR,
             _ART_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR,),
-        lockable=True,
-        exclusive_lockable=True
+            _WOODEN_ITEM_FLAVOR,
+            ),
+        key=_CHAVE_BASICA #TODO
         )
 _PORTA_TIJOLADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tijolos'),
         flavor_list = (
             _NULL_ITEM_FLAVOR,
             ),
-        lockable=True,
-        exclusive_lockable=True
+        key=_CHAVE_BASICA #TODO
         )
 _PORTA_TABOAS = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tábuas'),
         flavor_list = (
             _NULL_ITEM_FLAVOR,
             ),
-        lockable=True,
-        exclusive_lockable=True
-        )
-_PORTA_COM_CADEADO = _PassageType.make_unsided(
-        desc = Substantive.make_female('porta com um cadeado'),
-        flavor_list = (
-            _USEBLAE_ITEM_FLAVOR,
-            _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR
-            ),
-        lockable=True
+        key=_CHAVE_BASICA #TODO
         )
 
 
@@ -732,7 +767,6 @@ _MAP_TYPE = _MapType(
                 _PASSAGEM_SECRETA_QUADRO,
                 _PORTA_TIJOLADA,
                 _PORTA_TABOAS,
-                _PORTA_COM_CADEADO,
                 ),
         )
 

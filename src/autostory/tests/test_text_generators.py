@@ -156,14 +156,14 @@ def test_passage_distribution():
 def test_passage_distribution():
     builder = text_generators.MapBuilder()
     builder.create_passage(0, 1, False)
-    builder.create_passage(1, 2, False)
-    builder.create_passage(2, 3, False)
     builder.create_ambient(0)
     builder.create_ambient(1)
-    builder.create_ambient(2)
-    builder.create_ambient(3)
     b = builder.build()
-    print(b.as_json())
-    pp(b.as_dict())
 
-    # assert 0
+    pp(b.as_dict())
+    dct = b.as_dict()
+    for amb in dct['ambients']:
+        for pas in amb['passages']:
+            assert pas in map(lambda p: p['descritption'], dct['passages'])
+
+    assert 0
