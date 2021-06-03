@@ -127,9 +127,11 @@ def test_place_generation_no_repeat():
 
     
 def test_passage_generation():
-    context = text_generators.Context()
-    for _ in range(50):
-        passage_a, passage_b = context.make_passage()
+    builder = text_generators.MapBuilder()
+    for i in range(50):
+        builder.create_passage(i, i+1, False)
+        passage_a = builder.passage_map[i][i+1]
+        passage_b = builder.passage_map[i+1][i]
         desc = passage_a.describe()
         assert desc
         desc = passage_b.describe()
@@ -156,8 +158,10 @@ def test_passage_distribution():
 def test_passage_distribution():
     builder = text_generators.MapBuilder()
     builder.create_passage(0, 1, False)
+    builder.create_passage(0, 2, True)
     builder.create_ambient(0)
     builder.create_ambient(1)
+    builder.create_ambient(2)
     b = builder.build()
 
     pp(b.as_dict())

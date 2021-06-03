@@ -222,12 +222,36 @@ class Place(GrammerMakebla):
 
 
 @dataclass_abc(unsafe_hash=True)
+class Key(GrammerMakebla):
+    context: 'Context' = field(compare=False)
+    desc: Substantive
+    flavor: _Flavor
+
+    @classmethod
+    def make(cls, passage_type: _PassageType, context: 'Context'):
+        flavor = choice(passage_type.key_type.flavor_list)
+        desc = passage_type.key_type.desc
+        return Key(context, desc, flavor)
+
+    @property
+    def base_description(self):
+        return '#desc# #adjetivo#'
+
+    @property
+    def raw_grammar(self):
+        _raw_grammar = {'empty': ''}
+        print(self.desc)
+        _raw_grammar.update(self.desc.raw('desc'))
+        _raw_grammar.update(self.flavor.raw('adjetivo'))
+        return _raw_grammar
+
+
+@dataclass_abc(unsafe_hash=True)
 class Passage(GrammerMakebla):
     context: 'Context' = field(compare=False)
     nome: Substantive
     passage_type: _PassageType
     flavor: _Flavor
-    #TODO add key
 
     @property
     def base_description(self) -> str:
@@ -236,8 +260,16 @@ class Passage(GrammerMakebla):
     @classmethod
     def make(cls, passage_type: _PassageType, context: 'Context') -> Tuple['Passage', 'Passage']:
         flavor = choice(passage_type.flavor_list)
-        return (cls(context = context, nome = passage_type.a_side, flavor = flavor, passage_type = passage_type,),
-                cls(context = context, nome = passage_type.b_side, flavor = flavor, passage_type = passage_type,))
+        return (cls(context = context,
+                    nome = passage_type.a_side,
+                    flavor = flavor,
+                    passage_type = passage_type,
+                    ),
+                cls(context = context, 
+                    nome = passage_type.b_side,
+                    flavor = flavor,
+                    passage_type = passage_type,
+                    ))
 
     @property
     def raw_grammar(self):
@@ -346,17 +378,6 @@ class Context():
         self.place_type_set.add(place.place_type)
         return place
     
-    def make_passage(self, locked = False) -> Tuple['Passage', 'Passage']:
-
-        types_available: Iterable[_PassageType] = self.map_type.passage_types
-        if (locked):
-            types_available = tuple(t for t in types_available if t.key)
-        else:
-            types_available = tuple(t for t in types_available if not t.key)
-
-        passage_type = choice(types_available)
-        return Passage.make(passage_type, self)
-
 
 class MapBuilder():
 
@@ -374,15 +395,27 @@ class MapBuilder():
         self.context = Context()
         self.passage_map = self.__PassageMap()
         self.ambient_map = dict()
+        self.key_map = dict()
 
     @property
     def ambient_list(self):
         return list(self.ambient_map.values())
 
     def create_passage(self, _from, _to, locked):
-        a_side, b_side = self.context.make_passage(locked)
+        types_available: Iterable[_PassageType] = self.context.map_type.passage_types
+        if (locked):
+            types_available = tuple(t for t in types_available if t.key_type)
+        else:
+            types_available = tuple(t for t in types_available if not t.key_type)
+
+        passage_type = choice(types_available)
+        a_side, b_side = Passage.make(passage_type, self.context)
+
         self.passage_map[_from][_to] = a_side
         self.passage_map[_to][_from] = b_side
+
+        if locked:
+            self.key_map[(_from, _to)] = Key.make(passage_type, self.context)
 
     def create_ambient(self, _id):
         passages = tuple(self.passage_map[_id].values())
@@ -422,6 +455,15 @@ class MapBuilder():
                     decorations = tuple(decoration_list),
                     )
             ambient_list.append(ambient)
+
+        keys = list()
+        for (_from, _to), inst in self.key_map.items():
+            keys.append(datamodels.Key(
+                _to,
+                0, #TODO
+                inst.describe(),
+                ))
+
         
         return datamodels.Map(
                     introducion_letter = next(intro_letter()),
@@ -429,5 +471,6 @@ class MapBuilder():
                     descritption = self.context.map.describe(),
                     ambients = tuple(ambient_list),
                     passages = tuple(passage_list),
+                    keys = tuple(keys)
                 )
 

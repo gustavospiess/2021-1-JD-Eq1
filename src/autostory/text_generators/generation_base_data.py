@@ -175,7 +175,7 @@ class _PassageType(NamedTuple):
     a_side: 'Substantive'
     b_side: 'Substantive'
     flavor_list: Tuple['_Flavor']
-    key: _KeyType = None
+    key_type: _KeyType = None
 
     @classmethod
     def make_unsided(cls, desc: 'Substantive', *args, **kwargs):
@@ -334,7 +334,7 @@ _PORTA_TRANCADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR
             ),
-        key=_CHAVE_BASICA
+        key_type=_CHAVE_BASICA
         )
 _PORTA_DUPLA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta dupla'),
@@ -351,7 +351,7 @@ _PORTA_DUPLA_TRANCADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR
             ),
-        key=_CHAVE_BASICA
+        key_type=_CHAVE_BASICA
         )
 _PORTA_ADORNADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta adornada'),
@@ -368,7 +368,7 @@ _PORTA_ADORNADA_TRANCADA = _PassageType.make_unsided(
             _BASE_ITEM_FLAVOR,
             _ART_ITEM_FLAVOR
             ),
-        key=_CHAVE_BASICA
+        key_type=_CHAVE_BASICA
         )
 _PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
         desc = Substantive.make_female('estante de livros'),
@@ -377,7 +377,7 @@ _PASSAGEM_SECRETA_LIVROS = _PassageType.make_unsided(
             _USEBLAE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR,
             ),
-        key=_CHAVE_BASICA #TODO
+        key_type=_CHAVE_BASICA #TODO
         )
 _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
         desc = Substantive.make_male('quadro'),
@@ -387,21 +387,21 @@ _PASSAGEM_SECRETA_QUADRO = _PassageType.make_unsided(#TODO two sides
             _ART_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR,
             ),
-        key=_CHAVE_BASICA #TODO
+        key_type=_CHAVE_BASICA #TODO
         )
 _PORTA_TIJOLADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tijolos'),
         flavor_list = (
             _NULL_ITEM_FLAVOR,
             ),
-        key=_CHAVE_BASICA #TODO
+        key_type=_CHAVE_BASICA #TODO
         )
 _PORTA_TABOAS = _PassageType.make_unsided(
         desc = Substantive.make_female('porta fechada com tábuas'),
         flavor_list = (
             _NULL_ITEM_FLAVOR,
             ),
-        key=_CHAVE_BASICA #TODO
+        key_type=_CHAVE_BASICA #TODO
         )
 
 

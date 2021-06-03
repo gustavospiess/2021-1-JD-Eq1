@@ -13,6 +13,12 @@ class Passage(NamedTuple):
     descritption: str
 
 
+class Key(NamedTuple):
+    destination: int
+    place: int
+    descritption: str
+
+
 class Ambient(NamedTuple):
     id: int
     descritption: str
@@ -26,6 +32,7 @@ class Map(NamedTuple):
     descritption: str
     ambients: Tuple[Ambient, ...]
     passages: Tuple[Tuple[Passage, Passage], ...]
+    keys: Tuple[Key]
 
     def as_dict(self):
         return {
@@ -33,7 +40,8 @@ class Map(NamedTuple):
                     'name': self.name,
                     'descritption': self.descritption,
                     'ambients': tuple(a._asdict() for a in self.ambients),
-                    'passages': tuple((p1._asdict(), p2._asdict(),) for p1, p2 in self.passages)
+                    'passages': tuple((p1._asdict(), p2._asdict(),) for p1, p2 in self.passages),
+                    'keys': tuple(k._asdict() for k in self.keys)
                 }
 
     def as_json(self):
