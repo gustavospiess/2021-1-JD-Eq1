@@ -1,6 +1,5 @@
 from typing import NamedTuple
-from random import choice, randint, sample
-import random
+from random import choice, randint, shuffle
 
 
 __doc___ = '''
@@ -28,6 +27,10 @@ class Vertex(NamedTuple):
     area: int
     sub_area: int
 
+    @property
+    def identifier(self) -> str:
+        return f'{self.area}_{self.sub_area}'
+
 
 class Edge(NamedTuple):
     origin: 'Vertex'
@@ -39,46 +42,49 @@ class Key(NamedTuple):
     door: 'Edge'
 
 
-def raw(size = 4, size_factor = 2):
+def raw(size = 3, size_factor = 4) -> Raw:
+    if not size or size < 3:
+        size = 3
+    if not size_factor or size_factor < 4:
+        size_factor = 4
 
-    if not size:
-        size = 4
-
-    if not size_factor:
-        size_factor = 1
-
-    vertexes = [Vertex(i, 0) for i in range(size)]
+    vertexes = [Vertex(0, 0)]
     edges = []
     keys = []
-    for i in range(0, size-1):
-        e = Edge(vertexes[i], choice(vertexes[i+1:]))
-        k = Key(vertexes[i+1], e)
-        edges.append(e)
-        keys.append(k)
 
-    for room in vertexes[1:]:
-        area = [room]
-        minimum = size_factor//2
-        maximum = size_factor*len(tuple(e for e in edges if room in e))
-        for i in range(1, randint(minimum, maximum)):
-            edge_count = randint(1, i)
-            to_connect = sample(area, edge_count)
-            new_room = Vertex(room.area, i)
-            area.append(new_room)
-            vertexes.append(new_room)
-            for other in to_connect:
-                edges.append(Edge(other, new_room))
+    for area_id in range(1, size):
+        vertexes.append(Vertex(area_id, 0))
+        minimum_sub_size = size_factor//2+1
+        maximum_sub_size = size_factor*2-1
+        sub_size = randint(minimum_sub_size, maximum_sub_size)
+        for sub_area_id in range(1, sub_size):
+            new_vertex = Vertex(area_id, sub_area_id)
+            minimum_connection = 1
+            maximum_connection = min(sub_area_id, 3)
+            connection_amount = randint(minimum_connection, maximum_connection)
+            for connection_id in range(connection_amount):
+                edges.append(Edge(
+                    new_vertex,
+                    choice(tuple(v for v in vertexes if v.area == area_id))
+                    ))
+            vertexes.append(new_vertex)
 
-        if room.area < len(keys):
-            edges[room.area] = Edge(choice(area), edges[room.area].destin)
-            try:
-                keys[room.area-1] = Key(
-                        choice(tuple(a for a in area if a not in edges[room.area])),
-                        keys[room.area-1][1])
-            except IndexError:
-                keys[room.area-1] = Key(
-                        area[0],
-                        keys[room.area-1][1])
+    for area_id in range(0, size-1):
+        previous = [area_id + 1, randint(min(area_id+1, size-1), size-1)]
+        shuffle(previous)
+        key_area, door_area = previous
+
+        new_edge = Edge(
+                choice(tuple(v for v in vertexes if v.area == door_area)),
+                choice(tuple(v for v in vertexes if v.area == area_id)),
+                )
+        new_key = Key(
+                choice(tuple(v for v in vertexes if v.area == key_area and v not in new_edge)),
+                new_edge,
+                )
+        edges.append(new_edge)
+        keys.append(new_key)
+
 
     return Raw(set(vertexes), set(edges), set(keys), vertexes[0])
 

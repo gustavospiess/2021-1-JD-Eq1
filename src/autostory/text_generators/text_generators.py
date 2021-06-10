@@ -1,3 +1,6 @@
+from pprint import pp
+
+
 from tracery import Grammar
 
 from random import choice, sample
@@ -235,12 +238,11 @@ class Key(GrammerMakebla):
 
     @property
     def base_description(self):
-        return '#desc# #adjetivo#'
+        return '[temp:adjetivo_#desc_o#]#desc_um# #desc# #empty.norepeat(temp)#'
 
     @property
     def raw_grammar(self):
         _raw_grammar = {'empty': ''}
-        print(self.desc)
         _raw_grammar.update(self.desc.raw('desc'))
         _raw_grammar.update(self.flavor.raw('adjetivo'))
         return _raw_grammar
@@ -396,10 +398,6 @@ class MapBuilder():
         self.passage_map = self.__PassageMap()
         self.ambient_map = dict()
         self.key_map = dict()
-
-    @property
-    def ambient_list(self):
-        return list(self.ambient_map.values())
 
     def create_passage(self, _from, _to, locked):
         types_available: Iterable[_PassageType] = self.context.map_type.passage_types

@@ -49,9 +49,7 @@ def test_raw_generation():
 def test_key_shuffle():
     count = 0
     for i in range(100):
-        _map = map_generators.raw(8, 5)
+        _map = map_generators.raw()
         count += len(tuple(k for k in _map.keys if k[0] in k[1]))
-        assert any(k.position == (7, 0) for k in _map.keys if k[0] in k[1])
-        # assert that the first room always has its key and its door
-    assert count//100 == 1
+    assert count == 0
     # assert that the key is not in the room where its door is most of the time

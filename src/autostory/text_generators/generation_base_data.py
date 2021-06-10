@@ -198,84 +198,87 @@ class _DecorationItemType(_ItemType):
 _NULL_ITEM_FLAVOR = _Flavor((Adjective('', '', '', ''),))
 
 _BASE_ITEM_FLAVOR = _Flavor((
-        Adjective.make('suj'),
-        Adjective.make('muito suj'),
-        Adjective.make('imund'),
-        Adjective.make('velh'),
-        Adjective.make('muito velh'),
-        Adjective.make('empoeirad'),
-        Adjective.make('muito empoeirad'),
-        Adjective.make('maltratad'),
-        Adjective.make('esquecid'),
-        Adjective.make('abadonad'),
-        Adjective.make('nojent'),
-        Adjective.make_agender('deplorável', rad_s='deploráveis'),
-        Adjective.make_format(lambda g: f'que parece{g[0]} que est{g[1]} suj{g[2]} a muito tempo',
-            m=('', 'á', 'o'), ms=('m', 'ão', 'o'), f=('', 'á', 'a'), fs=('m', 'ão', 'as')),
-        Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} limp{g[2]} a muito tempo',
-            m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
+    Adjective.make('suj'),
+    Adjective.make('muito suj'),
+    Adjective.make('imund'),
+    Adjective.make('velh'),
+    Adjective.make('muito velh'),
+    Adjective.make('empoeirad'),
+    Adjective.make('muito empoeirad'),
+    Adjective.make('maltratad'),
+    Adjective.make('esquecid'),
+    Adjective.make('abadonad'),
+    Adjective.make('nojent'),
+    Adjective.make_agender('deplorável', rad_s='deploráveis'),
+    Adjective.make_format(lambda g: f'que parece{g[0]} que est{g[1]} suj{g[2]} a muito tempo',
+        m=('', 'á', 'o'), ms=('m', 'ão', 'o'), f=('', 'á', 'a'), fs=('m', 'ão', 'as')),
+    Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} limp{g[2]} a muito tempo',
+        m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
     ))
 _WOODEN_ITEM_FLAVOR = _Flavor((
-        Adjective.make_agender('de madeira', same=True),
-        Adjective.make_agender('de madeira podre', same=True),
-        Adjective.make_agender('de madeira maciça', same=True),
-        Adjective.make_format(lambda g: f'feit{g} de madeira'),
-        Adjective.make_format(lambda g: f' que é feit{g} de madeira podre'),
-        Adjective.make_agender('com lascas faltando', same=True),
-        Adjective.make_agender('que está com lascas faltando', same=True),
-        Adjective.make('lascad'),
-        Adjective.make_agender('frágil', 'frágeis'),
+    Adjective.make_agender('de madeira', same=True),
+    Adjective.make_agender('de madeira podre', same=True),
+    Adjective.make_agender('de madeira maciça', same=True),
+    Adjective.make_format(lambda g: f'feit{g} de madeira'),
+    Adjective.make_format(lambda g: f' que é feit{g} de madeira podre'),
+    Adjective.make_agender('com lascas faltando', same=True),
+    Adjective.make_agender('que está com lascas faltando', same=True),
+    Adjective.make('lascad'),
     ))
 _METAL_ITEM_FLAVOR = _Flavor((
-        Adjective.make_agender('de metal', same=True),
-        Adjective.make_agender('de ferro', same=True),
-        Adjective.make_format(lambda g: f'enferrujad{g}'),
-        Adjective.make_format(lambda g: f'cobert{g} de ferrugem'),
-        Adjective.make_format(lambda g: f'feit{g} metal'),
-        Adjective.make_format(lambda g: f' que é feit{g} de metal'),
-        Adjective.make_agender('brilhante', same=True),
-        Adjective.make_agender('frágil', 'frágeis'),
-        Adjective.make_agender('resistente'),
+    Adjective.make_agender('de metal', same=True),
+    Adjective.make_agender('de ferro', same=True),
+    Adjective.make_format(lambda g: f'enferrujad{g}'),
+    Adjective.make_format(lambda g: f'cobert{g} de ferrugem'),
+    Adjective.make_format(lambda g: f'feit{g} metal'),
+    Adjective.make_format(lambda g: f' que é feit{g} de metal'),
+    Adjective.make_agender('brilhante', same=True),
+    Adjective.make_agender('frágil', 'frágeis'),
+    Adjective.make_agender('resistente'),
     ))
 _FABRIC_ITEM_FLAVOR = _Flavor((
-        Adjective.make_agender('de tecido', same=True),
-        Adjective.make_format(lambda g: f'feit{g} de tecido'),
-        Adjective.make_format(lambda g: f'de tecido e chei{g} de rasgos'),
-        Adjective.make_format(lambda g: f'chei{g} de rasgos'),
-        Adjective.make_format(lambda g: f'chei{g} de manchas'),
-        Adjective.make_agender('com manchas', same=True),
-        Adjective.make_agender('com rasgos', same=True),
-        Adjective.make_agender('com furos', same=True),
-        Adjective.make('mofad'),
+    Adjective.make_agender('de tecido', same=True),
+    Adjective.make_format(lambda g: f'feit{g} de tecido'),
+    Adjective.make_format(lambda g: f'de tecido e chei{g} de rasgos'),
+    Adjective.make_format(lambda g: f'chei{g} de rasgos'),
+    Adjective.make_format(lambda g: f'chei{g} de manchas'),
+    Adjective.make_agender('com manchas', same=True),
+    Adjective.make_agender('com rasgos', same=True),
+    Adjective.make_agender('com furos', same=True),
+    Adjective.make('mofad'),
     ))
 _USEBLAE_ITEM_FLAVOR = _Flavor((
-        Adjective.make_agender('com marcas de uso', same=True),
-        Adjective.make_agender('com muitas marcas de uso', same=True),
-        Adjective.make_agender('que parece estar sem uso a anos', same=True),
-        Adjective.make_agender('que parece que ninguém usa a muito tempo', same=True),
-        Adjective.make_format(lambda g: f'que parece{g[0]} que {g[1]} muito usad{g[2]}',
-            m=('', 'foi', 'o'), ms=('m', 'foram', 'o'), f=('', 'foi', 'a'), fs=('m', 'foram', 'as')),
-        Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} usad{g[2]} a muito tempo',
-            m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
-        Adjective.make_format(lambda g: f'abandonad{g} a muito tempo'),
-        Adjective.make_format(lambda g: f'que foi abandonad{g} a muito tempo'),
-        Adjective.make_format(lambda g: f'replet{g} de marcas de uso'),
-        Adjective.make_agender(f'que ninguém usa a muito tempo', same=True),
+    Adjective.make_agender('com marcas de uso', same=True),
+    Adjective.make_agender('com muitas marcas de uso', same=True),
+    Adjective.make_agender('que parece estar sem uso a anos', same=True),
+    Adjective.make_agender('que parece que ninguém usa a muito tempo', same=True),
+    Adjective.make_format(lambda g: f'que parece{g[0]} que {g[1]} muito usad{g[2]}',
+        m=('', 'foi', 'o'), ms=('m', 'foram', 'o'), f=('', 'foi', 'a'), fs=('m', 'foram', 'as')),
+    Adjective.make_format(lambda g: f'que parece{g[0]} que não {g[1]} usad{g[2]} a muito tempo',
+        m=('', 'é', 'o'), ms=('m', 'são', 'o'), f=('', 'é', 'a'), fs=('m', 'são', 'as')),
+    Adjective.make_format(lambda g: f'abandonad{g} a muito tempo'),
+    Adjective.make_format(lambda g: f'que foi abandonad{g} a muito tempo'),
+    Adjective.make_format(lambda g: f'replet{g} de marcas de uso'),
+    Adjective.make_agender(f'que ninguém usa a muito tempo', same=True),
     ))
 _ART_ITEM_FLAVOR = _Flavor((
-        Adjective.make_agender('de péssimo gosto', same=True),
-        Adjective.make('macabr'),
-        Adjective.make('horroros'),
-        Adjective.make('sinistr'),
-        Adjective.make('macabr'),
-        Adjective.make('horroros'),
-        Adjective.make('sinistr'),
-        Adjective.make('bastante macabr'),
-        Adjective.make('bastante sinistr'),
-        Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
-        Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
-        Adjective.make_format(lambda g: f'bastante atormentador{g}', m='', ms='es'),
-        Adjective.make_format(lambda g: f'muito atormentador{g}', m='', ms='es'),
+    Adjective.make_agender('de péssimo gosto', same=True),
+    Adjective.make('macabr'),
+    Adjective.make('horroros'),
+    Adjective.make('sinistr'),
+    Adjective.make('macabr'),
+    Adjective.make('horroros'),
+    Adjective.make('sinistr'),
+    Adjective.make('bastante macabr'),
+    Adjective.make('bastante sinistr'),
+    Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
+    Adjective.make_format(lambda g: f'atormentador{g}', m='', ms='es'),
+    Adjective.make_format(lambda g: f'bastante atormentador{g}', m='', ms='es'),
+    Adjective.make_format(lambda g: f'muito atormentador{g}', m='', ms='es'),
+    ))
+_DELICATE_ITEM_FLAVOR = _Flavor((
+    Adjective.make('delicad'),
+    Adjective.make_agender('frágil', 'frágeis'),
     ))
 
 
@@ -287,8 +290,9 @@ _CHAVE_BASICA = _KeyType(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR,
-            _ART_ITEM_FLAVOR
+            _METAL_ITEM_FLAVOR,
+            # _WOODEN_ITEM_FLAVOR,
+            # _ART_ITEM_FLAVOR,
             ),
         )
 
@@ -302,6 +306,7 @@ _ESCADA = _PassageType.make_unsided(
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
             _WOODEN_ITEM_FLAVOR,
+            _DELICATE_ITEM_FLAVOR,
             ),
         )
 _PASSAGEM = _PassageType.make_unsided(
@@ -309,6 +314,10 @@ _PASSAGEM = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
+            _ART_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
+            _DELICATE_ITEM_FLAVOR,
             ),
         )
 _PASSAGEM_ADORNADA = _PassageType.make_unsided(
@@ -317,6 +326,9 @@ _PASSAGEM_ADORNADA = _PassageType.make_unsided(
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
             _ART_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
+            _DELICATE_ITEM_FLAVOR,
             ),
         )
 _PORTA = _PassageType.make_unsided(
@@ -324,7 +336,9 @@ _PORTA = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
+            _DELICATE_ITEM_FLAVOR,
             ),
         )
 _PORTA_TRANCADA = _PassageType.make_unsided(
@@ -332,7 +346,8 @@ _PORTA_TRANCADA = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
             ),
         key_type=_CHAVE_BASICA
         )
@@ -341,7 +356,9 @@ _PORTA_DUPLA = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
+            _DELICATE_ITEM_FLAVOR,
             ),
         )
 _PORTA_DUPLA_TRANCADA = _PassageType.make_unsided(
@@ -349,7 +366,8 @@ _PORTA_DUPLA_TRANCADA = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _WOODEN_ITEM_FLAVOR
+            _WOODEN_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
             ),
         key_type=_CHAVE_BASICA
         )
@@ -358,15 +376,19 @@ _PORTA_ADORNADA = _PassageType.make_unsided(
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _ART_ITEM_FLAVOR
+            _ART_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
             ),
+        key_type=_CHAVE_BASICA
         )
 _PORTA_ADORNADA_TRANCADA = _PassageType.make_unsided(
         desc = Substantive.make_female('porta adornada e trancada'),
         flavor_list = (
             _USEBLAE_ITEM_FLAVOR,
             _BASE_ITEM_FLAVOR,
-            _ART_ITEM_FLAVOR
+            _ART_ITEM_FLAVOR,
+            _METAL_ITEM_FLAVOR,
+            _WOODEN_ITEM_FLAVOR,
             ),
         key_type=_CHAVE_BASICA
         )

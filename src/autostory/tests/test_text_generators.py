@@ -1,6 +1,7 @@
 from .. import text_generators
 from collections import Counter
 from pprint import pp
+from itertools import chain
 
 
 def test_monster_names():
@@ -164,10 +165,9 @@ def test_passage_distribution():
     builder.create_ambient(2)
     b = builder.build()
 
-    pp(b.as_dict())
     dct = b.as_dict()
+
+    pp(dct)
     for amb in dct['ambients']:
         for pas in amb['passages']:
-            assert pas in map(lambda p: p['descritption'], dct['passages'])
-
-    assert 0
+            assert pas in map(lambda p: p['descritption'], chain(*dct['passages']))
