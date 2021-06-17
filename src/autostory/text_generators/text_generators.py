@@ -398,8 +398,12 @@ class MapBuilder():
         self.passage_map = self.__PassageMap()
         self.ambient_map = dict()
         self.key_map = dict()
+        self.key_place_map = dict()
+        self.first_ambient = None
 
-    def create_passage(self, _from, _to, locked):
+    def create_passage(self, _from, _to, _where):
+        locked = bool(_where)
+
         types_available: Iterable[_PassageType] = self.context.map_type.passage_types
         if (locked):
             types_available = tuple(t for t in types_available if t.key_type)
@@ -412,8 +416,9 @@ class MapBuilder():
         self.passage_map[_from][_to] = a_side
         self.passage_map[_to][_from] = b_side
 
-        if locked:
+        if bool(locked):
             self.key_map[(_from, _to)] = Key.make(passage_type, self.context)
+            self.key_place_map[(_from, _to)] = _where.position.identifier
 
     def create_ambient(self, _id):
         passages = tuple(self.passage_map[_id].values())
@@ -431,10 +436,8 @@ class MapBuilder():
 
         passage_list = list()
         for (f_id, f_inst), (t_id, t_inst) in self.passage_map.iter_pairs():
-            passage_pair = (
-                    datamodels.Passage(f_id, f_inst.describe()),
-                    datamodels.Passage(t_id, t_inst.describe()))
-            passage_list.append(passage_pair)
+            passage_list.append(datamodels.Passage(f_id, t_id, f_inst.describe()))
+            passage_list.append(datamodels.Passage(t_id, f_id, t_inst.describe()))
 
         ambient_list = list()
         for _id, _inst in self.ambient_map.items():
@@ -458,15 +461,15 @@ class MapBuilder():
         for (_from, _to), inst in self.key_map.items():
             keys.append(datamodels.Key(
                 _to,
-                0, #TODO
+                self.key_place_map[(_from, _to)],
                 inst.describe(),
                 ))
-
         
         return datamodels.Map(
                     introducion_letter = next(intro_letter()),
                     name = self.context.map.name,
                     descritption = self.context.map.describe(),
+                    first_ambient = self.first_ambient,
                     ambients = tuple(ambient_list),
                     passages = tuple(passage_list),
                     keys = tuple(keys)

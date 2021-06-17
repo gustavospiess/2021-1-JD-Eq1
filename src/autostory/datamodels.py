@@ -9,18 +9,19 @@ class Decoration(NamedTuple):
 
 
 class Passage(NamedTuple):
-    destination: int
+    destination: str
+    origin: str
     descritption: str
 
 
 class Key(NamedTuple):
-    destination: int
-    place: int
+    destination: str
+    place: str
     descritption: str
 
 
 class Ambient(NamedTuple):
-    id: int
+    id: str
     descritption: str
     passages: Tuple[Passage, ...]
     decorations: Tuple[Decoration, ...]
@@ -30,8 +31,9 @@ class Map(NamedTuple):
     introducion_letter: str
     name: str
     descritption: str
+    first_ambient: str
     ambients: Tuple[Ambient, ...]
-    passages: Tuple[Tuple[Passage, Passage], ...]
+    passages: Tuple[Passage, ...]
     keys: Tuple[Key]
 
     def as_dict(self):
@@ -39,8 +41,9 @@ class Map(NamedTuple):
                     'introducion_letter': self.introducion_letter,
                     'name': self.name,
                     'descritption': self.descritption,
+                    'first_ambient': self.first_ambient,
                     'ambients': tuple(a._asdict() for a in self.ambients),
-                    'passages': tuple((p1._asdict(), p2._asdict(),) for p1, p2 in self.passages),
+                    'passages': tuple(p._asdict() for p in self.passages),
                     'keys': tuple(k._asdict() for k in self.keys)
                 }
 

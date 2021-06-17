@@ -20,6 +20,7 @@ class Raw(NamedTuple):
     vertexes: set
     edges: set
     keys: set
+    initial: 'Vertex'
     final: 'Vertex'
 
 
@@ -86,5 +87,9 @@ def raw(size = 3, size_factor = 4) -> Raw:
         keys.append(new_key)
 
 
-    return Raw(set(vertexes), set(edges), set(keys), vertexes[0])
-
+    return Raw(
+        vertexes = set(vertexes),
+        edges = set(edges),
+        keys = set(keys),
+        initial = vertexes[-1],
+        final = vertexes[0]) 
