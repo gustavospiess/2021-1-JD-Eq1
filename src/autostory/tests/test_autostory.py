@@ -1,5 +1,5 @@
 from .. import generate_json
-from json import dumps, loads
+from json import loads
 from pprint import pp
 
 

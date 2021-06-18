@@ -395,22 +395,35 @@ class MapBuilder():
 
     def __init__(self):
         self.context = Context()
+
         self.passage_map = self.__PassageMap()
         self.ambient_map = dict()
+
         self.key_map = dict()
         self.key_place_map = dict()
+
         self.first_ambient = None
+        
+        self.used_ambient_types = set()
 
     def create_passage(self, _from, _to, _where):
         locked = bool(_where)
 
-        types_available: Iterable[_PassageType] = self.context.map_type.passage_types
+        types_available = set(self.context.map_type.passage_types) - self.used_ambient_types
+
         if (locked):
             types_available = tuple(t for t in types_available if t.key_type)
+            if not types_available:
+                types_available = tuple(t for t in self.context.map_type.passage_types if t.key_type)
+                self.used_ambient_types -= set(types_available)
         else:
             types_available = tuple(t for t in types_available if not t.key_type)
+            if not types_available:
+                types_available = tuple(t for t in self.context.map_type.passage_types if not t.key_type)
+                self.used_ambient_types -= set(types_available)
 
         passage_type = choice(types_available)
+        self.used_ambient_types.add(passage_type)
         a_side, b_side = Passage.make(passage_type, self.context)
 
         self.passage_map[_from][_to] = a_side

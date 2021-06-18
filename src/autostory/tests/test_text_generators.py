@@ -137,37 +137,3 @@ def test_passage_generation():
         assert desc
         desc = passage_b.describe()
         assert desc
-
-
-def test_passage_distribution():
-    builder = text_generators.MapBuilder()
-    builder.create_passage(0, 1, False)
-    builder.create_ambient(0)
-    builder.create_ambient(1)
-    for place in builder.ambient_list:
-        assert place.passages[0].nome.word in place.describe()
-        assert place.passages[0].locked == False
-    builder = text_generators.MapBuilder()
-    builder.create_passage(0, 1, True)
-    builder.create_ambient(0)
-    builder.create_ambient(1)
-    for place in builder.ambient_list:
-        assert place.passages[0].nome.word in place.describe()
-        assert place.passages[0].locked == True
-
-
-def test_passage_distribution():
-    builder = text_generators.MapBuilder()
-    builder.create_passage(0, 1, False)
-    builder.create_passage(0, 2, True)
-    builder.create_ambient(0)
-    builder.create_ambient(1)
-    builder.create_ambient(2)
-    b = builder.build()
-
-    dct = b.as_dict()
-
-    pp(dct)
-    for amb in dct['ambients']:
-        for pas in amb['passages']:
-            assert pas in map(lambda p: p['descritption'], chain(*dct['passages']))
